@@ -37,7 +37,7 @@ export function EntryRow(props: {
     }, displayName(entry)),
     label.length > 0 && label !== toolName
       ? createElement('span', { key: 'toolName', style: rowMetaStyle, title: '模型看到的工具名' }, toolName)
-      : null,
+      : createElement('span', { style: rowMetaStyle }),
     warning !== undefined
       ? createElement('span', { key: 'warning', style: warnBadgeStyle, title: warning }, '!')
       : null,

@@ -272,8 +272,8 @@ const rowStyle: Record<string, string> = {
 
 /** 行内条目名（只读展示）。 */
 const rowNameStyle: Record<string, string> = {
-  flex: '1',
-  minWidth: '0',
+  flex: 'none',
+  // minWidth: '0',
   fontSize: '14px',
   fontWeight: 500,
   lineHeight: '1.4',
@@ -292,7 +292,7 @@ const rowNameDerivedStyle: Record<string, string> = {
 
 /** 折叠行里跟在显示名后的工具名（弱化，说明模型看到的名称）。 */
 const rowMetaStyle: Record<string, string> = {
-  flex: 'none',
+  flex: '1',
   fontSize: '12px',
   lineHeight: '1.4',
   color: 'var(--dsw-alias-label-tertiary)',
