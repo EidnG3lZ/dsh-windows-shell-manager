@@ -16,10 +16,11 @@ export function EntryRow(props: {
   warning: string | undefined
   saving: boolean
   onUpdate(index: number, patch: Partial<DraftEntry>): void
-  onSetPrimary(index: number): void
+  /** 切换"设为默认"复选框：传入条目索引和勾选状态。 */
+  onTogglePrimary(index: number, checked: boolean): void
   onOpenConfig(id: string): void
 }): ReturnType<typeof createElement> {
-  const { entry, index, warning, saving, onUpdate, onSetPrimary, onOpenConfig } = props
+  const { entry, index, warning, saving, onUpdate, onTogglePrimary, onOpenConfig } = props
   const label = (entry.label ?? '').trim()
   const toolName = effectiveName(entry)
   // 显示名优先；两者都没有时才用弱化色提示「名称是从路径推导的」。
@@ -46,17 +47,19 @@ export function EntryRow(props: {
         type: 'checkbox',
         checked: entry.enabled,
         disabled: saving,
-        onChange: (event: { target: { checked: boolean } }) => onUpdate(index, { enabled: event.target.checked }),
+        onChange: (event: { target: { checked: boolean } }) => {
+          // 取消启用时，自动取消该条目的默认状态
+          onUpdate(index, { enabled: event.target.checked, primary: event.target.checked ? entry.primary : false })
+        },
       }),
       createElement('span', null, '启用'),
     ),
     createElement('label', { key: 'primary', style: switchLabelStyle, title: '多个 shell 启用时，引导提示词优先推荐它' },
       createElement('input', {
-        type: 'radio',
-        name: 'shell-policy-primary',
+        type: 'checkbox',
         checked: entry.primary,
         disabled: saving || !entry.enabled,
-        onChange: () => onSetPrimary(index),
+        onChange: (event: { target: { checked: boolean } }) => onTogglePrimary(index, event.target.checked),
       }),
       createElement('span', null, '默认'),
     ),

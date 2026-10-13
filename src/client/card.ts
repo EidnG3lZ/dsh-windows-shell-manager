@@ -122,8 +122,20 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
     setDraft(entries.map((entry, i) => i === index ? { ...entry, ...patch } : entry))
   }
 
-  const setPrimary = (index: number): void => {
-    setDraft(entries.map((entry, i) => ({ ...entry, primary: i === index })))
+  /**
+   * 切换"设为默认"复选框：
+   * - checked=true（勾选默认）：将当前条目设为 primary:true，其他所有条目设为 primary:false（互斥，最多一个默认）
+   * - checked=false（取消默认）：仅将当前条目设为 primary:false，允许出现"无默认"状态
+   */
+  const togglePrimary = (index: number, checked: boolean): void => {
+    setDraft(entries.map((entry, i) => {
+      if (i === index) {
+        return { ...entry, primary: checked }
+      } else {
+        // 如果当前条目被勾选为默认，其他条目必须取消默认
+        return { ...entry, primary: false }
+      }
+    }))
   }
 
   const addEntry = (): void => {
@@ -289,7 +301,7 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
         warning: entryWarning(entry, index),
         saving,
         onUpdate: update,
-        onSetPrimary: setPrimary,
+        onTogglePrimary: togglePrimary,
         onOpenConfig: openEntryConfig,
       }))),
     entries.length === 0
