@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 面板的类型与常量。
+ * dsh-windows-shell-manager — client 面板的类型与常量。
  */
 import type { SlotsService } from '@deepseek-ai/dsh-client-ui-slots'
 

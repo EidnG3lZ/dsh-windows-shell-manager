@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+### 破坏性变更
+
+- **项目改名为 `dsh-windows-shell-manager`（原 `dsh-windows-shell-policy`）**：本仓库是 [LAN-TINA-WS/dsh-windows-shell-policy](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy) 的 fork，功能已从「单 shell 三选一」演变为「可增删的多 shell 条目管理」，且 npm 上的原名由上游作者持有（latest `0.0.7`），因此改用独立包名发布。改动面：`package.json` 的 `name`/`repository`/`homepage`/`bugs`、`cordis.patch.yml` 的 `id`/`name`、`src/index.ts` 的 `name`、`src/host/context.ts` 的 `PKG_NAME`（反查 profile entry id，必须与包名一致）、`src/client/index.ts` 的 bundle config `key`、`tsdown.config.ts` 的 `PLUGIN_ID`、README 徽章与安装命令、`LICENSE`（保留上游版权并追加 fork 版权）。**HTTP API 路径同步改为 `/dsh-shell-manager/api/*`**（原 `/dsh-shell-policy/api/*`，client 与两个测试同步）。引导提示词 section 名与日志前缀改为 `shell-manager`。**对用户的影响**：安装命令与包名变化；已按旧包名安装的 profile 需移除后重装（配置存在旧 entry id 下，不会自动迁移）。
+- **旧配置字段兼容不变**：`shells` 数组与 `preferred`/`bashPath` 迁移逻辑未变，只是其所在 profile entry 的 id 随包名改变。
+
 ### 变更
 
 - **源码按职责拆分为多模块（纯结构重构，行为不变）**：`src/index.ts`（1155 行）退化为 38 行 facade（只保留 `name` / `inject` 与重导出），实现拆到 `src/host/` 下 9 个模块（config / shell-args / detect / result / tool / policy / api / context / apply）；`src/client/index.ts`（1098 行）拆为 `src/client/` 下 8 个模块（types / styles / icons / validation / entry-row / entry-detail / card / index），`ShellPolicyCard` 容器与 `EntryRow` / `EntryDetail` 展示组件分离。公开契约（`name` / `inject` / `Config` / `ShellEntry` / `defaultToolDescription` / `apply`）与 `package.json` 的 `main` / `exports` 未变；`lib/` 按约定重新生成并入库（host 新增 `lib/host/*.js` 与 `lib/types/host/*.d.ts`）。验证：`tsc` 通过、tsdown 通过、`tests/host-harness.mjs` 61/61 与 `tests/executable-and-args.mjs` 33/33 通过；结构与验证记录见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §13。

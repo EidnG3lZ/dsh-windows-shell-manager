@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — host 侧的 DSH 上下文适配。
+ * dsh-windows-shell-manager — host 侧的 DSH 上下文适配。
  *
  * 只放「与 DSH 接口对齐」的声明与工具，不含业务逻辑：
  * 1. 本插件消费的 host 服务面（webServer 的类型未随 Context 自动合并，需自行声明）；
@@ -13,7 +13,7 @@ declare module '@deepseek-ai/dsh-jobs' {
     }
 }
 /** 本插件的包名（也是 profile entry 的 name，用于解析自身 entry id）。 */
-declare const PKG_NAME = "dsh-windows-shell-policy";
+declare const PKG_NAME = "dsh-windows-shell-manager";
 /**
  * 解析本插件在 profile 中的 entry id。
  * DSH 0.2.0 起 settings 的配置 namespace 即 profile entry id（插件 Config schema

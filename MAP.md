@@ -36,7 +36,8 @@ E:\DSHProjects\dsh-windows-shell-policy\     ← 工作区根 = git 仓库根（
 | 当前版本 | `0.1.1` | [package.json](package.json) / [CHANGELOG.md](CHANGELOG.md) |
 | 版本号规范 | SemVer；变更记录参考 Keep a Changelog | CHANGELOG 头部说明 |
 | git 主分支 | `main` → `origin/main`；最新提交 `8e7c580`（2026-10-08）；**无 tag** | `git log`/`git tag` |
-| 远端 | fetch: `git.64832619.xyz`；push: `github.com` | `git remote -v` |
+| 远端 | fetch: `git.64832619.xyz/EidnG3lZ/dsh-windows-shell-policy`；push: `github.com/EidnG3lZ/dsh-windows-shell-policy`（**远端仓库名尚未随本地改名更新**） | `git remote -v` |
+| 包名 | `dsh-windows-shell-manager`（原 `dsh-windows-shell-policy`；后者 npm 由上游持有） | [package.json](package.json) |
 
 ## 3. 构建与工具链映射
 
@@ -47,23 +48,23 @@ E:\DSHProjects\dsh-windows-shell-policy\     ← 工作区根 = git 仓库根（
 
 - `scripts/build.sh` 按 `DSH_CHECKOUT` → `$HOME/dsh-harness` → `$HOME/dsh` → `$HOME/.dsh/dsh-harness` 探测 checkout（必须含 `packages/`）。
 - 本机 checkout：`E:\DSHSource\current`，**已 bootstrap**，`dsh --version` = `0.2.0-rc.2`（本次核对）。备选 checkout 的存在性与 bootstrap 状态：**待核实**。
-- 工具链实测：node `v26.10.0`、npm `11.19.1`（本次核对）。
+- 工具链实测：node `v26.11.1`（本次核对；此前记录为 `v26.10.0`）。
 - 编译期依赖靠 `build.sh` 建立的 junction（`vendor/*`、`packages/*`）解析；**运行期 import 必须用发布名**（见 [DECISIONS.md](DECISIONS.md) D7）。
 
 ## 4. 部署 / 装配映射
 
 | 位置 | 内容 | 本机状态（2026-10-09 核对） |
 | --- | --- | --- |
-| npm 包 | `lib` + `cordis.patch.yml` + `LICENSE`（`files` 字段） | 是否已发布 `0.1.1`：**待核实** |
-| GitHub Release | ZIP（lib + cordis.patch.yml + package.json + LICENSE） | 最新 Release 版本：**待核实** |
+| npm 包 | `lib` + `cordis.patch.yml` + `LICENSE`（`files` 字段） | 新包名 `dsh-windows-shell-manager` **未发布**（可注册）；旧名由上游持有 latest `0.0.7` |
+| GitHub Release | ZIP（lib + cordis.patch.yml + package.json + LICENSE） | 新仓库 `EidnG3lZ/dsh-windows-shell-manager` **尚未创建** |
 | web profile | `~/.dsh/profiles/web`（`dsh web` 服务实例） | **未安装本插件**；依赖中含同类插件 `dsh-gitbash-shell@0.33.0` |
 | desktop profile | Electron 桌面应用使用的 `~/.dsh/profiles/desktop` | **待核实**（本次未检查；两端 profile 互相独立，需分别装配） |
 | 开发态注入 | `dev_inject_plugin`（junction + `loader.create`） | 运行期注入，重启 web 后失效；持久化用 `dev_install_package` 或正式安装 |
 
-安装形态（详见 [README.md](README.md)）：`dsh plugin add github:<owner>/<repo>`｜`... add dsh-windows-shell-policy`｜`... add link:<解压目录>`。
+安装形态（详见 [README.md](README.md)）：`dsh plugin add github:<owner>/<repo>`｜`... add dsh-windows-shell-manager`｜`... add link:<解压目录>`。
 
 ## 5. 配置持久化位置
 
 - 条目写入**本插件 profile entry config 的 `shells` 数组**（经 host 的 `settings.mutate(entryId, …)`；settings namespace = profile entry id）。
 - 旧字段 `preferred` / `bashPath` 仅在 `shells` 为空时作为迁移来源，首次保存时落盘。
-- 面板读写不走 settings 的浏览器 RPC（apiproxy allowlist 不含本插件），而走自带 HTTP API `/dsh-shell-policy/api/*`（见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §4.7）。
+- 面板读写不走 settings 的浏览器 RPC（apiproxy allowlist 不含本插件），而走自带 HTTP API `/dsh-shell-manager/api/*`（见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §4.7）。

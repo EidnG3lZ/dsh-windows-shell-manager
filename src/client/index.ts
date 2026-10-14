@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 配置页入口（plugins.bundle.config）。
+ * dsh-windows-shell-manager — client 配置页入口（plugins.bundle.config）。
  *
  * 在插件管理页的本插件详情页注册「Shell 工具」配置面板：可增删的 shell 条目列表。
  * 列表里的条目是**折叠态**——只显示名称（只读；显示名优先，留空回落到工具名）、启用开关
@@ -8,7 +8,7 @@
  * 新建条目的「工具提示词」由 host 的 POST /defaults 预填成默认模板（面板不再各写一份模板），
  * 并可随时「重置为默认」。
  * 读写走 host 插件自己的 API
- * （/dsh-shell-policy/api/status、/shells、/detect、/defaults）——settings 的 client 端 RPC 有
+ * （/dsh-shell-manager/api/status、/shells、/detect、/defaults）——settings 的 client 端 RPC 有
  * apiproxy allowlist 限制，本插件 namespace 不在其中，故不依赖 settingsScope；
  * host 端仍经 settings 服务持久化。监听 settings/document-updated 事件实时刷新。
  *
@@ -32,22 +32,22 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.inject('plugins.bundle.config', () =>
     ctx.slots.register({
       name: 'plugins.bundle.config',
-      key: 'dsh-windows-shell-policy',
+      key: 'dsh-windows-shell-manager',
       label: () => 'Shell 工具',
       inject: () => ({ remote }),
     } as any, ShellPolicyCard as any),
-  ), 'dsh-windows-shell-policy: bundle config page')
+  ), 'dsh-windows-shell-manager: bundle config page')
 
   // 0.1.x 兼容：旧版「设置 → 插件 → 插件配置」的卡片槽位（0.2.0 已移除该槽位，
   // slots.inject 对未声明的槽位不会执行回调，因此无副作用）。
   ctx.effect(() => ctx.slots.inject('settings.plugin.item', () =>
     ctx.slots.register({
       name: 'settings.plugin.item',
-      id: 'shell-policy',
-      key: 'shell-policy',
+      id: 'shell-manager',
+      key: 'shell-manager',
       order: 5,
       label: () => 'Shell 工具',
       inject: () => ({ remote }),
     } as any, ShellPolicyCard as any),
-  ), 'dsh-windows-shell-policy: legacy settings card')
+  ), 'dsh-windows-shell-manager: legacy settings card')
 }

@@ -25,7 +25,7 @@
 - tsconfig 必须 `exclude: ["src/client"]`——host tsc 编译 client 会因 react 等浏览器依赖报 TS2307
 - **发布前手动构建 + `npm publish --ignore-scripts`**：`prepublishOnly` 里的 `bash scripts/build.sh` 在 cmd.exe 环境下因 bash 不在 PATH 而失败（已在 package.json 移除该钩子）
 - **volatile-only 配置更新不会重挂插件**：`settings.mutate` 只改 volatile 字段时，loader 走 `vendor/loader/src/config/entry.ts` 的 `_commitVolatile()`——原地 `updateVolatile` 写进已有引用并发 `loader/volatile-update`，**`apply` 不会再次执行**。依赖配置的插件必须监听该事件（或在自己的读路径上按需重算），否则保存后面板/工具面停在旧快照（本插件 v0.1.0 的「保存后修改消失」即此因）
-- **运行期依赖必须写发布名**：`@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。`schemastery` / `cordis` 只是 `build.sh` 建的编译期本地别名（`vendor/*` 的真实包名是作用域名）；装进 profile 后 Node 从 `~/.dsh/profiles/node_modules` 解析真实包名，裸名会 `ERR_MODULE_NOT_FOUND` → 启动打印 `dsh-windows-shell-policy: failed to import`、配置页不出现（v0.1.0 的真实故障，v0.1.1 修复）。`peerDependencies` 同样用发布名
+- **运行期依赖必须写发布名**：`@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。`schemastery` / `cordis` 只是 `build.sh` 建的编译期本地别名（`vendor/*` 的真实包名是作用域名）；装进 profile 后 Node 从 `~/.dsh/profiles/node_modules` 解析真实包名，裸名会 `ERR_MODULE_NOT_FOUND` → 启动打印 `dsh-windows-shell-manager: failed to import`、配置页不出现（v0.1.0 的真实故障，v0.1.1 修复）。`peerDependencies` 同样用发布名
 
 ## Host 侧
 
@@ -67,6 +67,7 @@
 
 ## 发布
 
+- **包名即身份**：profile entry 的 `name` 取自 `package.json` 的 `name`，而 `src/host/context.ts` 的 `PKG_NAME` 又靠它反查 entry id（settings namespace）。改名时必须**同时**改 `package.json`、`cordis.patch.yml`（id+name）、`src/index.ts` 的 `name`、`PKG_NAME`、client bundle config 的 `key` 与 `tsdown.config.ts` 的 `PLUGIN_ID`，否则面板保存写不进配置。见 [DECISIONS.md](DECISIONS.md) D14。
 - bundle patch 装配：包内 `cordis.patch.yml`（insert 插件行）+ package.json `dsh.bundle.patch` 声明，`dsh plugin add github:...` 一条命令正式安装
 - npm 发布：`files` 清单（lib + cordis.patch.yml + LICENSE）、去 `private`；**发布前手动构建**（`prepublishOnly` 里的 bash 在 cmd 下失败，已移除）
 - **npm staged publishing**：新版 npm 的发布可能需要暂存/批准，`npm publish` 返回成功但 registry 未立即出现；此时重复发布会报 `E409 Cannot publish over previously staged version`。等几分钟版本会落地，或在 npm 网站批准；**换一个补丁版本号也是最快的绕过方式**

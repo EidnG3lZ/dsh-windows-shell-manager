@@ -1,7 +1,7 @@
 {
-  "name": "dsh-windows-shell-policy",
+  "name": "dsh-windows-shell-manager",
   "version": "0.1.1",
-  "description": "DSH Windows shell policy plugin: manage multiple shell tools (git-bash / MSYS2 / Cygwin / PowerShell) as add-and-remove entries with an enable switch, auto-detected path, tool prompt and full-sandbox permission. DSH Windows Shell 策略插件：以可增删条目管理多个 shell 工具（启用开关 / 路径自动探测 / 工具提示词 / 沙箱完全权限）并动态注册对应工具",
+  "description": "DSH Windows shell manager plugin: manage multiple shell tools (git-bash / MSYS2 / Cygwin / PowerShell) as add-and-remove entries with an enable switch, auto-detected path, tool prompt and full-sandbox permission. DSH Windows Shell 策略插件：以可增删条目管理多个 shell 工具（启用开关 / 路径自动探测 / 工具提示词 / 沙箱完全权限）并动态注册对应工具",
   "type": "module",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
@@ -24,11 +24,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LAN-TINA-WS/dsh-windows-shell-policy.git"
+    "url": "git+https://github.com/EidnG3lZ/dsh-windows-shell-manager.git"
   },
-  "homepage": "https://github.com/LAN-TINA-WS/dsh-windows-shell-policy#readme",
+  "homepage": "https://github.com/EidnG3lZ/dsh-windows-shell-manager#readme",
   "bugs": {
-    "url": "https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/issues"
+    "url": "https://github.com/EidnG3lZ/dsh-windows-shell-manager/issues"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-llm": ">=0.0.1-rc <2",

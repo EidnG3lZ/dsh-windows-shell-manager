@@ -1,8 +1,8 @@
-# dsh-windows-shell-policy 架构与开发指南
+# dsh-windows-shell-manager 架构与开发指南
 
 > 本文档是对本仓库（插件源码）的完整梳理，用于后续开发准备。
 > 基线：`v0.1.0` 梳理（多 shell 条目模型），部分内容已随 `v0.1.1` 更新；**未特殊说明时所有相对路径均以仓库根目录为基准**。
-> **2026-10-09 结构更正**：原文把本仓库描述为工作区下的嵌套目录，且所有相对链接带 `dsh-windows-shell-policy/` 前缀，实际 git 仓库根**就是**工作区根，链接已全部改为相对仓库根（详见 §2.1）。
+> **2026-10-09 结构更正**：原文把本仓库描述为工作区下的嵌套目录，且所有相对链接带 `dsh-windows-shell-manager/` 前缀，实际 git 仓库根**就是**工作区根，链接已全部改为相对仓库根（详见 §2.1）。
 > **2026-10-09 开发经验复核**：§2.2 包元数据、§6 构建与发布、§7.3 客户端槽位必坑、§8 本机现状、§9.2/§9.3 注意点、§10 开发指引已按当前代码与本机实测逐条核对，据此修正了版本号 / `peerDependencies` 值域 / `scripts`、§7.3 第 3 条（该槽位已随 DSH 0.2.0 删除）、§8 备选 checkout 的 bootstrap 状态，并按**沙箱实测**重写了 §9.3 与 §6.2/§8 的构建警告（受限沙箱拒绝的是「工作区外 target 的 junction」，`niu` 可替代起不来的 git-bash，但不能绕过文件沙箱）。**§3–§5 及 §4 各功能小节的功能性描述仍未逐行复核**（未变化处保持原样）。
 > `#L行号` 锚点已随 **2026-10-09 模块拆分**全部替换为所属模块的文件链接（不再有行号锚点）；正文中的符号名请在该模块内按名定位。
 
@@ -26,7 +26,7 @@
 
 ## 1. 一句话定位与问题背景
 
-`dsh-windows-shell-policy` 是一个 **DSH（DeepSeek Harness）组合插件（bundle plugin）**，同时含 host 与 client 两半：
+`dsh-windows-shell-manager` 是一个 **DSH（DeepSeek Harness）组合插件（bundle plugin）**，同时含 host 与 client 两半：
 
 - **问题**：DSH 在 Windows 上默认启用 PowerShell（官方 `tool-pwsh`），而 LLM 训练语料以 bash 为主，agent 写 POSIX 命令时错误率显著升高。
 - **做法**：维护一组可增删的 **shell 条目**（启用开关 / 工具名 / 可执行文件路径 / 工具提示词 / 沙箱完全权限 / 默认项），在插件管理页的本插件详情页可视化编辑；每个启用且可用的条目**注册一个独立 shell 工具**（Bash 家族 `-c`、PowerShell 家族 `-Command`，走 subprocess 通道），并**用提示词裁剪隐藏 DSH 内置的 `bash`/`pwsh`**，使工具面完全由条目决定。
@@ -56,7 +56,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 │   │   ├── result.ts        shell 工具结果渲染与 exit/signal 解析（55 行）
 │   │   ├── tool.ts          单条目 shell 工具定义（defineTool，含执行全链路）（302 行）
 │   │   ├── policy.ts        策略状态机（注册/注销、状态视图、引导文本）（160 行）
-│   │   ├── api.ts           面板读写 HTTP API（/dsh-shell-policy/api/*）（214 行）
+│   │   ├── api.ts           面板读写 HTTP API（/dsh-shell-manager/api/*）（214 行）
 │   │   ├── context.ts       DSH 服务面类型声明 / loader 反查 entry id / jobs kind 增强（56 行）
 │   │   └── apply.ts         插件装配（apply）（95 行）
 │   └── client/              client 配置页，按职责分模块（8 个文件）
@@ -99,7 +99,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 
 | 字段 | 值 / 作用 |
 | --- | --- |
-| `name` / `version` | `dsh-windows-shell-policy` / `0.1.1`（`type: module`） |
+| `name` / `version` | `dsh-windows-shell-manager` / `0.1.1`（`type: module`） |
 | `main` / `types` | `./lib/index.js` / `./lib/types/index.d.ts` |
 | `exports` | `.` → lib/index.js；`./client` → lib/client.js；`./package.json` |
 | `files` | `lib`、`cordis.patch.yml`、`LICENSE`（决定 npm 包与 Release 内容） |
@@ -114,8 +114,8 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 
 ```yaml
 - insert:
-    - id: dsh-windows-shell-policy
-      name: 'dsh-windows-shell-policy'
+    - id: dsh-windows-shell-manager
+      name: 'dsh-windows-shell-manager'
 ```
 
 ---
@@ -125,7 +125,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 ```
                     ┌─────────────────────────── client（浏览器） ───────────────────────────┐
                     │  ShellPolicyCard（React，slots 'plugins.bundle.config'）                │
-                    │  fetch /dsh-shell-policy/api/{status,shells,detect,defaults}          │
+                    │  fetch /dsh-shell-manager/api/{status,shells,detect,defaults}          │
                     └───────────────▲──────────────────────────────────────┬─────────────────┘
                                     │ 折叠条目列表 ⇄ 单条目配置界面          │ 整表写配置（POST /shells）
                                     │ （+ 每条目运行时状态、滚动锚点）        │ 默认提示词（POST /defaults）
@@ -144,7 +144,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 │                              │           ├─ enabled + 可用 + 名称唯一 → tools.register()   │
 │                              │           └─ 其它 → EntryStatus.error（面板可见）            │
 │                              ▼                     │                                        │
-│  settings 服务（持久化到 profile entry config）    ├──► systemPrompt.section('shell-policy') │
+│  settings 服务（持久化到 profile entry config）    ├──► systemPrompt.section('shell-manager') │
 │                                                    │      列出已注册工具 + primary 优先项    │
 │                                                    └──► system-prompt/assemble：有工具注册   │
 │                                                         时隐藏内置 bash / pwsh              │
@@ -174,7 +174,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 | [host/result.ts](../src/host/result.ts) | 结果渲染与 exit / signal 状态解析 |
 | [host/tool.ts](../src/host/tool.ts) | 单条目 shell 工具定义（`buildTool`，含执行全链路） |
 | [host/policy.ts](../src/host/policy.ts) | 策略状态机 `createShellPolicy`（reconcile / statusView / registeredNames / guidanceText / disposeAll） |
-| [host/api.ts](../src/host/api.ts) | `/dsh-shell-policy/api/*` 路由与 settings 落盘 |
+| [host/api.ts](../src/host/api.ts) | `/dsh-shell-manager/api/*` 路由与 settings 落盘 |
 | [host/context.ts](../src/host/context.ts) | DSH 服务面类型声明、loader 反查 entry id、jobs kind 增强 |
 | [host/apply.ts](../src/host/apply.ts) | 插件装配（`apply`：settings / 提示词裁剪 / section / 清理） |
 
@@ -182,7 +182,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 
 | 导出 | 位置 | 说明 |
 | --- | --- | --- |
-| `name` | [src/index.ts](../src/index.ts) | `'dsh-windows-shell-policy'` |
+| `name` | [src/index.ts](../src/index.ts) | `'dsh-windows-shell-manager'` |
 | `inject` | [src/index.ts](../src/index.ts) | `['tools', 'subprocess', 'systemPrompt', 'webServer']` |
 | `ShellEntry` / `Config` | [host/config.ts](../src/host/config.ts) | 条目类型 + schemastery schema（`shells` 数组 volatile），DSH 0.2.0 自动投影为设置表单 |
 | `apply` | [host/apply.ts](../src/host/apply.ts) | 插件主体 |
@@ -301,16 +301,16 @@ for each shell of entries:
 
 ### 4.7 HTTP API（面板读写通道，[host/api.ts](../src/host/api.ts)）
 
-`ctx.effect(() => ctx.webServer.register({kind:'prefix', path:'/dsh-shell-policy/api', handler}))`，**所有平台都注册**：
+`ctx.effect(() => ctx.webServer.register({kind:'prefix', path:'/dsh-shell-manager/api', handler}))`，**所有平台都注册**：
 
 | 方法 + 路径 | 行为 |
 | --- | --- |
-| `GET /dsh-shell-policy/api/status` | 返回 `{platform, supported, entries, migrated, registered: string[], registerError?, …}`；`entries` 是 [`EntryStatus[]`](../src/host/policy.ts)（条目配置字段 + `resolvedPath` + `registered` + `error`），另附旧客户端兼容字段 `effective` / `bashFound` / `bashPath` / `preferred` / `configuredBashPath`（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-policy/api/shells` | body `{shells}`；`normalizeEntries` 归一化 → `validateEntriesForSave` 校验（≤16、名称唯一、`run_code` 保留、路径与 PATH 目录必须绝对、启动参数引号闭合）→ `settings.mutate(entryId, [{op:'set', path:['shells'], value}])`；不合法 400、落盘失败 500，均带原因（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-policy/api/detect` | body `{name, path}` → 走 `resolveShellPath` 返回 `{ok, path}`（`path` 是文件名时在 PATH 里找；留空时按家族探测；未找到时 `path: ''`）（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-policy/api/defaults` | body `{name, path, args}` → 归一化后调 [`defaultToolDescription()`](../src/host/shell-args.ts) 返回 `{ok, description}`；面板「新建条目预填」与「重置为默认」都打这个接口，模板只在 host 存在一份（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-policy/api/preferred` | 旧客户端兼容：写 `preferred`（auto \| bash \| pwsh）（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-policy/api/bashpath` | 旧客户端兼容：写 `bashPath`（[host/api.ts](../src/host/api.ts)） |
+| `GET /dsh-shell-manager/api/status` | 返回 `{platform, supported, entries, migrated, registered: string[], registerError?, …}`；`entries` 是 [`EntryStatus[]`](../src/host/policy.ts)（条目配置字段 + `resolvedPath` + `registered` + `error`），另附旧客户端兼容字段 `effective` / `bashFound` / `bashPath` / `preferred` / `configuredBashPath`（[host/api.ts](../src/host/api.ts)） |
+| `POST /dsh-shell-manager/api/shells` | body `{shells}`；`normalizeEntries` 归一化 → `validateEntriesForSave` 校验（≤16、名称唯一、`run_code` 保留、路径与 PATH 目录必须绝对、启动参数引号闭合）→ `settings.mutate(entryId, [{op:'set', path:['shells'], value}])`；不合法 400、落盘失败 500，均带原因（[host/api.ts](../src/host/api.ts)） |
+| `POST /dsh-shell-manager/api/detect` | body `{name, path}` → 走 `resolveShellPath` 返回 `{ok, path}`（`path` 是文件名时在 PATH 里找；留空时按家族探测；未找到时 `path: ''`）（[host/api.ts](../src/host/api.ts)） |
+| `POST /dsh-shell-manager/api/defaults` | body `{name, path, args}` → 归一化后调 [`defaultToolDescription()`](../src/host/shell-args.ts) 返回 `{ok, description}`；面板「新建条目预填」与「重置为默认」都打这个接口，模板只在 host 存在一份（[host/api.ts](../src/host/api.ts)） |
+| `POST /dsh-shell-manager/api/preferred` | 旧客户端兼容：写 `preferred`（auto \| bash \| pwsh）（[host/api.ts](../src/host/api.ts)） |
+| `POST /dsh-shell-manager/api/bashpath` | 旧客户端兼容：写 `bashPath`（[host/api.ts](../src/host/api.ts)） |
 | 其它 | 404 JSON |
 
 实现细节：请求体经 [`readJsonBody()`](../src/host/api.ts) 手写 `req.on('data'/'end'/'error')` 拼接 + `JSON.parse`（空体按 `{}`）；`settings` / entry id 缺失由 [`writeSettings()`](../src/host/api.ts) 返回原因（500）；响应统一 `content-type: application/json; charset=utf-8`。
@@ -337,7 +337,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 - waterfall 事件：**必须先 `await next()`** 再裁剪（[host/apply.ts](../src/host/apply.ts)）。
 - **只要有本插件工具注册成功，就隐藏 DSH 内置 `bash`/`pwsh`**（[`BUILT_IN_SHELL_TOOLS`](../src/host/apply.ts)）——内置工具在 preset 层无法运行时注销，只能靠过滤隐藏；名字与内置冲突的条目本来就注册失败（见 4.4），`!ours.has(toolName)` 只是避免把同名条目一起裁掉。
 - 全部条目停用 / 不可用时 `registeredNames` 为空 → 不裁剪，回到 DSH 原始工具面。
-- 引导文本（[host/apply.ts](../src/host/apply.ts)）：`systemPrompt.section({name:'shell-policy', order:104, text: () => guidanceText()})`。[`guidanceText()`](../src/host/policy.ts) 列出已注册工具，并按 `primary`（缺省取第一个）指明优先使用；没有注册任何工具时返回空串。sections 按会话快照，新会话才看到新文本。
+- 引导文本（[host/apply.ts](../src/host/apply.ts)）：`systemPrompt.section({name:'shell-manager', order:104, text: () => guidanceText()})`。[`guidanceText()`](../src/host/policy.ts) 列出已注册工具，并按 `primary`（缺省取第一个）指明优先使用；没有注册任何工具时返回空串。sections 按会话快照，新会话才看到新文本。
 
 ### 4.10 自动表单与卸载清理
 
@@ -363,7 +363,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 
 | 槽位 | 位置 | 参数 | 状态 |
 | --- | --- | --- | --- |
-| `plugins.bundle.config` | [client/index.ts](../src/client/index.ts) | `name`（=槽位名）、`key:'dsh-windows-shell-policy'`、`label`（「Shell 工具」）、`inject:()=>({remote})` | **0.2.0 正式入口**，渲染在插件管理页的插件详情页内（`view:'page'`） |
+| `plugins.bundle.config` | [client/index.ts](../src/client/index.ts) | `name`（=槽位名）、`key:'dsh-windows-shell-manager'`、`label`（「Shell 工具」）、`inject:()=>({remote})` | **0.2.0 正式入口**，渲染在插件管理页的插件详情页内（`view:'page'`） |
 | `settings.plugin.item` | [client/index.ts](../src/client/index.ts) | `name`、`id`、`key`、`order:5`、`label`、`inject` | 0.1.x 兼容；0.2.0 已删该槽位，`slots.inject` 对未声明槽位不执行回调，**无副作用** |
 
 `export const inject = ['slots', 'remote']`（[client/index.ts](../src/client/index.ts)）—— 用 `ctx.slots` / `ctx.remote` 而不声明注入会直接报错。
@@ -384,7 +384,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 
 **状态与数据流**：
 
-- `load()` → `fetch('/dsh-shell-policy/api/status')`，失败置 `null`（[client/card.ts](../src/client/card.ts)）。
+- `load()` → `fetch('/dsh-shell-manager/api/status')`，失败置 `null`（[client/card.ts](../src/client/card.ts)）。
 - `useEffect` 里首次 `load()`，并订阅 `remote.$on('settings/document-updated', load)` 实现**外部写入后自动刷新**（[client/card.ts](../src/client/card.ts)）；返回退订函数。
 - **staged 编辑**：`draft` 为 `null` 表示「未改动」，`saved = status.entries.map(toDraft)`、`entries = draft ?? saved`、`dirty = draft !== null`；`problems` 逐条目预校验，`blocked = !dirty || saving || hasProblem`（[client/card.ts](../src/client/card.ts)）。
 - `update()` / `setPrimary()`（单选，其余条目清除 primary）/ `addEntry()`（id 用时间戳 + 随机串；新增后 `openEntryConfig` 直接进它的配置界面，然后 `probe` → [`fillDefaultDescription()`](../src/client/card.ts) **把默认模板预填进「工具提示词」**）/ `removeEntry()`（至少保留 1 条；删除后 `editingId` 置空回到列表）（[client/card.ts](../src/client/card.ts)）。
@@ -420,7 +420,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 | client | `tsdown`（来自 DSH checkout） | [tsdown.config.ts](../tsdown.config.ts) | `src/client/index.ts` → `lib/client.js`（CJS + sourcemap） |
 
 - [tsconfig.json](../tsconfig.json) 必须 **`"exclude": ["src/client"]`**：host tsc 编译 client 会因 react 等浏览器依赖报 TS2307。
-- tsdown 关键点：`format:'cjs'`、`platform:'browser'`、`dts:false`、`codeSplitting:false`；`react`/`react-dom`/`@deepseek-ai/cordis`/`@deepseek-ai/dsh-client-ui-slots`/`@deepseek-ai/dsh-client-runtime/client` 列为 external，其余 `alwaysBundle`；用 `banner`/`footer`/`intro` 把产物包成 `window.__ModuleLoader__.load({ id: 'dsh-windows-shell-policy', factory: (require) => { ... return module.exports } })`。
+- tsdown 关键点：`format:'cjs'`、`platform:'browser'`、`dts:false`、`codeSplitting:false`；`react`/`react-dom`/`@deepseek-ai/cordis`/`@deepseek-ai/dsh-client-ui-slots`/`@deepseek-ai/dsh-client-runtime/client` 列为 external，其余 `alwaysBundle`；用 `banner`/`footer`/`intro` 把产物包成 `window.__ModuleLoader__.load({ id: 'dsh-windows-shell-manager', factory: (require) => { ... return module.exports } })`。
 
 ### 6.2 [`scripts/build.sh`](../scripts/build.sh) 逐步
 
@@ -440,7 +440,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 
 - `package.json` 里 **`prepublishOnly` 已被移除**：其 `bash scripts/build.sh` 在 cmd.exe 环境下因 bash 不在 PATH 而失败。发布前**手动构建**，然后 `npm publish --ignore-scripts`。
 - npm **staged publishing** 坑：`npm publish` 报成功但 registry 未立即出现，重复发布会 `E409 Cannot publish over a previously staged version`；等待/网页批准，或直接换补丁版本号绕过（v0.0.6 即因此改版为 v0.0.7）。
-- 安装路径：`dsh plugin --profile web add github:<owner>/<repo>`（bundle patch 自动装配）｜`... add dsh-windows-shell-policy`（npm）｜`... add link:<解压目录>`（Release ZIP：lib + cordis.patch.yml + package.json + LICENSE）。
+- 安装路径：`dsh plugin --profile web add github:<owner>/<repo>`（bundle patch 自动装配）｜`... add dsh-windows-shell-manager`（npm）｜`... add link:<解压目录>`（Release ZIP：lib + cordis.patch.yml + package.json + LICENSE）。
 - 开发态免重启：`bash scripts/build.sh` + `dev_inject_plugin <目录>`（junction + `loader.create`，host 即时生效，client 刷新浏览器后拉新 bundle）；`dev_reload_package` 重建 fiber；`dev_uninject_plugin` 卸 entry + 清 registry + 删 junction + 写 disabled patch。
 - 注入是运行时的，重启 web 后需重新注入；要持久化用 `dev_install_package` 或正式安装。
 
@@ -496,7 +496,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 | 工具链 | node `v26.10.0`、git `2.55.0.windows.2`、`bash`→`D:\Scoop\shims\bash.exe`（**native applet shell，不是 git-bash**）、`niu`→`D:\Scoop\shims\niu.exe`（Niubash 1.3.3，原生 bash 兼容实现，沙箱内可用）、`pwsh` 7.6.6、`pnpm`、`tsc` 均在 PATH；git-bash 真身 `C:\Program Files\Git\bin\bash.exe` **在受限沙箱内无法启动**（见 §9.3） |
 | git-bash | `C:\Program Files\Git\bin\bash.exe` 存在（本插件 `bashCandidates()` 命中第 1 候选） |
 | web profile | `~/.dsh/profiles/web`（2026-10-09：本机路径已按隐私约定改为占位符）；`package.json` 的 bundles 里**没有**本插件，`cordis.patch.yml` 也没有相关 entry（v0.1.0 梳理时已无 disabled 残留） |
-| profile 残留 | v0.1.0 梳理时 `node_modules\dsh-windows-shell-policy` 已不存在（旧悬空 junction 已清理） |
+| profile 残留 | v0.1.0 梳理时 `node_modules\dsh-windows-shell-manager` 已不存在（旧悬空 junction 已清理） |
 | 同类插件 | profile 依赖里有 `dsh-gitbash-shell@0.33.0`（另一套 Windows→Git Bash 方案：物化预设的 Git Bash 变体、MSYS 路径方言统一、侧栏终端接管；带自己的 `cordis.patch.yml`）。**同时启用前需评估与本插件的工具/提示词冲突** |
 
 ### 建议的前置动作（首次开工）
@@ -508,7 +508,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 cd /e/DSHSource/current && pnpm install
 
 # 2) 构建本插件
-cd /e/DSHProjects/dsh-windows-shell-policy
+cd /e/DSHProjects\dsh-windows-shell-policy
 DSH_CHECKOUT=E:/DSHSource/current bash scripts/build.sh
 
 # 3) 先做一次类型基线（需要 build.sh 建好的 node_modules junction）
@@ -549,7 +549,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 8. **升级提示依赖注册时快照**：`escalationModes` 在 `buildTool()` 里按条目的 `fullAccess` 与组合能力算一次并闭包捕获（[host/tool.ts](../src/host/tool.ts)）；组合变化后需重新 apply 才更新（与第 2 条同源风险）。
 9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（61 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（33 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
 10. **硬编码中文 UI 文案**：客户端校验与状态文案均为中文字面量（如 [client/validation.ts](../src/client/validation.ts)、[client/card.ts](../src/client/card.ts)），host 侧 API 错误同样是中文（[host/config.ts](../src/host/config.ts)），无 i18n 层；而 DSH client 是有 locale 服务的。
-11. **运行期依赖曾用错包名（v0.1.0 的真实故障，v0.1.1 修复）**：`schemastery` / `cordis` 只是 `build.sh` 建立的编译期本地别名，`vendor/*` 的真实包名是 `@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。插件从 GitHub 装进 `profiles/<name>/node_modules` 后，Node 的向上查找只在共享的 `~/.dsh/profiles/node_modules` 命中作用域名那一份 → 裸名 `ERR_MODULE_NOT_FOUND`，DSH 启动打印 `dsh-windows-shell-policy (dsh-windows-shell-policy): failed to import`，配置面板不出现。**新增任何非 `node:` 内建的 import 前，先确认用的是发布名。**
+11. **运行期依赖曾用错包名（v0.1.0 的真实故障，v0.1.1 修复）**：`schemastery` / `cordis` 只是 `build.sh` 建立的编译期本地别名，`vendor/*` 的真实包名是 `@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。插件从 GitHub 装进 `profiles/<name>/node_modules` 后，Node 的向上查找只在共享的 `~/.dsh/profiles/node_modules` 命中作用域名那一份 → 裸名 `ERR_MODULE_NOT_FOUND`，DSH 启动打印 `dsh-windows-shell-manager (dsh-windows-shell-manager): failed to import`，配置面板不出现。**新增任何非 `node:` 内建的 import 前，先确认用的是发布名。**
 
 ### 9.3 沙箱相关（2026-10-09 实测）
 
@@ -676,7 +676,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | 核验对象 | 检查内容 | 结果 |
 | --- | --- | --- |
 | §2.1 目录结构 | 是否存在"工作区根 / 仓库根"两层嵌套 | **不成立**。工作区根即 git 仓库根（`E:\DSHProjects\dsh-windows-shell-policy`，`origin/main`）；已改写叙述与目录树，并补入仓库根的项目上下文文档、`docs/ARCHITECTURE.md` 自身 |
-| 全文相对链接（209 个） | 链接目标能否从文档所在目录解析 | 原文 199 处带 `dsh-windows-shell-policy/` 前缀，全部失效；已改为 `../` 相对仓库根，**114 个相对链接现全部可解析** |
+| 全文相对链接（209 个） | 链接目标能否从文档所在目录解析 | 原文 199 处带 `dsh-windows-shell-manager/` 前缀，全部失效；已改为 `../` 相对仓库根，**114 个相对链接现全部可解析** |
 | `[#Lxx]` 形式的链接标签（49 处） | 标签是否有意义 | 原文标签只有 `#L37` 这类行号，已全部改为文件名标签（如 `[src/index.ts](../src/index.ts)`） |
 | `src/index.ts` / `src/client/index.ts` 的 `#L` 锚点 | 行号是否仍指向同一符号 | 抽查与逐条核对后**修正 4 处失配**：`bashCandidates` 356→357、`pwshCandidates` 372→373、`disposeAll` 清理处 1153-1155→572-574、`entryRow` 808→809；其余锚点与符号一致，保持不动 |
 | §4.1 类型扩展两条 | 引用的行区间是否仍存在 | `JobKindMap.bash` 的 `#L31-L35` 仍准确；`AppContext` 原写 `#L524-L532` 已失效，改为文件链接（该类型现为 `src/index.ts#L524` 起） |

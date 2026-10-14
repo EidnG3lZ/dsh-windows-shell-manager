@@ -1,7 +1,7 @@
 /**
- * dsh-windows-shell-policy — host 侧的 HTTP API（面板读写通道）。
+ * dsh-windows-shell-manager — host 侧的 HTTP API（面板读写通道）。
  *
- * 路由挂在 /dsh-shell-policy/api：GET /status，POST /shells、/detect、/defaults，
+ * 路由挂在 /dsh-shell-manager/api：GET /status，POST /shells、/detect、/defaults，
  * 以及旧客户端的 /preferred、/bashpath。settings 的 client 端 RPC 有 allowlist 限制
  * （apiproxy WEB_SETTINGS_NAMESPACES），本插件 namespace 不在其中，因此面板读写都走这里，
  * host 端再经官方 settings 服务落盘。
@@ -44,7 +44,7 @@ export interface StatusApiDeps {
 export function registerStatusApi(ctx: AppContext, deps: StatusApiDeps): void {
   ctx.effect(() => ctx.webServer.register({
     kind: 'prefix',
-    path: '/dsh-shell-policy/api',
+    path: '/dsh-shell-manager/api',
     handler: async (req: any, res: any) => {
       const url = String(req.url ?? '')
       const send = (code: number, body: unknown): void => {
@@ -209,5 +209,5 @@ export function registerStatusApi(ctx: AppContext, deps: StatusApiDeps): void {
       }
       send(404, { ok: false, error: 'not found' })
     },
-  }), 'dsh-windows-shell-policy: status api')
+  }), 'dsh-windows-shell-manager: status api')
 }

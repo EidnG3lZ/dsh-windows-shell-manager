@@ -78,7 +78,7 @@ const ctx = {
   },
   systemPrompt: { section: () => () => {} },
   webServer: { register: (spec) => { routes.push(spec); return () => {} } },
-  loader: { entries: () => [{ options: { id: 'dsh-windows-shell-policy', name: 'dsh-windows-shell-policy' } }] },
+  loader: { entries: () => [{ options: { id: 'dsh-windows-shell-manager', name: 'dsh-windows-shell-manager' } }] },
 }
 
 function callApi(path, method, body) {
@@ -109,21 +109,21 @@ const argvOf = async (shell, command) => {
 // 1) 可执行文件：绝对路径 / 文件名（PATH）/ 无扩展名
 values.shells = [entry({ path: FAKE_BASH })]
 apply(ctx, config)
-let status = await callApi('/dsh-shell-policy/api/status', 'GET')
+let status = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('绝对路径直接用', status.json.entries[0]?.resolvedPath === FAKE_BASH, status.json.entries[0]?.resolvedPath)
 live([entry({ path: 'bash.exe' })])
-status = await callApi('/dsh-shell-policy/api/status', 'GET')
+status = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('文件名在 PATH 里查找', status.json.entries[0]?.resolvedPath === FAKE_BASH, status.json.entries[0]?.resolvedPath)
 live([entry({ path: 'bash' })])
-status = await callApi('/dsh-shell-policy/api/status', 'GET')
+status = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('无扩展名自动补 .exe', status.json.entries[0]?.resolvedPath === FAKE_BASH, status.json.entries[0]?.resolvedPath)
 live([entry({ path: 'C:/definitely/not/here/bash.exe' })])
-status = await callApi('/dsh-shell-policy/api/status', 'GET')
+status = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('绝对路径不存在 → 条目报错', String(status.json.entries[0]?.error ?? '').includes('未找到可执行文件'), JSON.stringify(status.json.entries[0]?.error))
 live([entry({ path: 'no-such-shell-xyz' })])
-status = await callApi('/dsh-shell-policy/api/status', 'GET')
+status = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('PATH 里没有该文件 → 条目报错', String(status.json.entries[0]?.error ?? '').includes('PATH 里没有找到'), JSON.stringify(status.json.entries[0]?.error))
-const relative = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ path: 'sub/bash.exe' })] })
+const relative = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ path: 'sub/bash.exe' })] })
 check('相对路径被拒绝', relative.code === 400 && String(relative.json.error).includes('绝对路径'), JSON.stringify(relative.json))
 
 // 2) 启动参数模板
@@ -144,30 +144,30 @@ const pwshCustom = await argvOf(entry({ id: 'e2', name: 'powershell', path: FAKE
 check('pwsh 模板可去掉默认开关',
   pwshCustom.length === 3 && pwshCustom[1] === '-Command' && pwshCustom[2].endsWith('Write-Output x'),
   JSON.stringify(pwshCustom))
-const noPlaceholder = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ args: '-l' })] })
+const noPlaceholder = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ args: '-l' })] })
 check('模板缺 {command} 被拒绝', noPlaceholder.code === 400 && String(noPlaceholder.json.error).includes('{command}'), JSON.stringify(noPlaceholder.json))
-const badQuote = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ args: '-l "{command}' })] })
+const badQuote = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ args: '-l "{command}' })] })
 check('引号未闭合被拒绝', badQuote.code === 400 && String(badQuote.json.error).includes('引号未闭合'), JSON.stringify(badQuote.json))
-const long = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ args: '{command}' + 'x'.repeat(5000) })] })
+const long = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ args: '{command}' + 'x'.repeat(5000) })] })
 check('启动参数截断到 1024', long.json.shells[0].args.length === 1024, String(long.json.shells[0].args.length))
 
 // 3) 保存 / 状态 / 探测 / 默认提示词
-const saved = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ path: 'bash.exe', args: '-l -c {command}' })] })
+const saved = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ path: 'bash.exe', args: '-l -c {command}' })] })
 const written = settingsWrites.at(-1)?.ops?.[0]?.value?.[0]
 check('保存带 path/args', saved.json.ok === true && written?.path === 'bash.exe' && written?.args === '-l -c {command}', JSON.stringify(saved.json).slice(0, 120))
 live([entry({ path: 'bash.exe' })])
-status = await callApi('/dsh-shell-policy/api/status', 'GET')
+status = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('status 回传 path/args', status.json.entries[0]?.path === 'bash.exe' && status.json.entries[0]?.args === '', JSON.stringify(status.json.entries[0]).slice(0, 200))
-const detect = await callApi('/dsh-shell-policy/api/detect', 'POST', { name: 'bash', path: 'bash.exe' })
+const detect = await callApi('/dsh-shell-manager/api/detect', 'POST', { name: 'bash', path: 'bash.exe' })
 check('/detect 支持文件名', detect.json.path === FAKE_BASH, JSON.stringify(detect.json))
-const detectEmpty = await callApi('/dsh-shell-policy/api/detect', 'POST', { name: 'bash', path: '' })
+const detectEmpty = await callApi('/dsh-shell-manager/api/detect', 'POST', { name: 'bash', path: '' })
 check('/detect 留空仍走家族探测', String(detectEmpty.json.path).toLowerCase().endsWith('bash.exe'), JSON.stringify(detectEmpty.json))
 
-const defaults = await callApi('/dsh-shell-policy/api/defaults', 'POST', { name: 'bash', path: 'bash.exe', args: '' })
+const defaults = await callApi('/dsh-shell-manager/api/defaults', 'POST', { name: 'bash', path: 'bash.exe', args: '' })
 check('/defaults 返回模板', defaults.json.ok === true && defaults.json.description.includes(FAKE_BASH), JSON.stringify(defaults.json).slice(0, 140))
 check('/defaults 文本含 -c 开关', defaults.json.description.includes('-c'), defaults.json.description.slice(0, 160))
 check('工具默认说明与 /defaults 完全一致', tools.get('bash')?.description === defaults.json.description, JSON.stringify([tools.get('bash')?.description?.slice(0, 80), defaults.json.description.slice(0, 80)]))
-const defaultsCustom = await callApi('/dsh-shell-policy/api/defaults', 'POST', { name: 'bash', path: 'bash.exe', args: '-l -c {command}' })
+const defaultsCustom = await callApi('/dsh-shell-manager/api/defaults', 'POST', { name: 'bash', path: 'bash.exe', args: '-l -c {command}' })
 check('/defaults 反映自定义模板', defaultsCustom.json.description.includes('-l -c') && !defaultsCustom.json.description.includes('{command}'), defaultsCustom.json.description.slice(0, 160))
 
 // 4) 子进程环境与自定义提示词
@@ -181,16 +181,16 @@ check('自定义提示词优先于模板', tools.get('bash')?.description === 'c
 
 // 5) 显示名（label）：面板里区分同工具名的条目，不进入工具面
 live([entry({ path: FAKE_BASH, label: '  Git\tBash  ' })])
-let labelStatus = await callApi('/dsh-shell-policy/api/status', 'GET')
+let labelStatus = await callApi('/dsh-shell-manager/api/status', 'GET')
 check('显示名折叠空白', labelStatus.json.entries[0]?.label === 'Git Bash', JSON.stringify(labelStatus.json.entries[0]?.label))
 check('显示名不改变工具名', tools.has('bash') && !tools.has('Git Bash'), [...tools.keys()].join(','))
-const savedLabel = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ path: 'bash.exe', label: 'Cygwin' })] })
+const savedLabel = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ path: 'bash.exe', label: 'Cygwin' })] })
 check('保存带 label', savedLabel.json.ok === true && settingsWrites.at(-1)?.ops?.[0]?.value?.[0]?.label === 'Cygwin', JSON.stringify(savedLabel.json).slice(0, 120))
-const longLabel = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ label: 'x'.repeat(200) })] })
+const longLabel = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ label: 'x'.repeat(200) })] })
 check('显示名截断到 64', longLabel.json.shells[0].label.length === 64, String(longLabel.json.shells[0].label.length))
-const missingLabel = await callApi('/dsh-shell-policy/api/shells', 'POST', { shells: [entry({ label: undefined })] })
+const missingLabel = await callApi('/dsh-shell-manager/api/shells', 'POST', { shells: [entry({ label: undefined })] })
 check('旧配置缺 label 补空串', missingLabel.json.shells[0].label === '', JSON.stringify(missingLabel.json.shells[0].label))
-const dupLabel = await callApi('/dsh-shell-policy/api/shells', 'POST', {
+const dupLabel = await callApi('/dsh-shell-manager/api/shells', 'POST', {
   shells: [
     entry({ id: 'e1', name: 'bash', label: 'Git Bash', path: 'bash.exe' }),
     entry({ id: 'e2', name: 'bash', label: 'Cygwin', path: 'bash.exe', primary: false }),

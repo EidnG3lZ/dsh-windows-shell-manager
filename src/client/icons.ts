@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 面板用到的图标组件。
+ * dsh-windows-shell-manager — client 面板用到的图标组件。
  */
 import { createElement } from 'react'
 

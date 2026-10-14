@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 面板的配置组件（容器）。
+ * dsh-windows-shell-manager — client 面板的配置组件（容器）。
  *
  * 持有全部状态与请求：加载 /status、草稿编辑、探测与默认提示词、保存 / 放弃，
  * 以及列表 ⇄ 单条目配置界面的视图切换与滚动位置保持。展示交给 EntryRow / EntryDetail。
@@ -35,7 +35,7 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
   const [listHeight, setListHeight] = useState<number | null>(null)
 
   const load = (): void => {
-    fetch('/dsh-shell-policy/api/status')
+    fetch('/dsh-shell-manager/api/status')
       .then((r) => r.json())
       .then((s) => setStatus(s as Status))
       .catch(() => setStatus(null))
@@ -169,7 +169,7 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
   const probe = async (index: number, entry: DraftEntry): Promise<DraftEntry> => {
     let next: DraftEntry
     try {
-      const response = await fetch('/dsh-shell-policy/api/detect', {
+      const response = await fetch('/dsh-shell-manager/api/detect', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: entry.name, path: entry.path }),
@@ -192,7 +192,7 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
    */
   const fillDefaultDescription = async (index: number, entry: DraftEntry): Promise<void> => {
     try {
-      const response = await fetch('/dsh-shell-policy/api/defaults', {
+      const response = await fetch('/dsh-shell-manager/api/defaults', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: entry.name, path: entry.path, args: entry.args ?? '' }),
@@ -210,7 +210,7 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
     if (blocked) return
     setSaving(true)
     setFailed(null)
-    fetch('/dsh-shell-policy/api/shells', {
+    fetch('/dsh-shell-manager/api/shells', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

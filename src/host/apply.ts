@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — host 侧的插件装配。
+ * dsh-windows-shell-manager — host 侧的插件装配。
  *
  * `apply` 只做接线：解析配置入口、创建策略状态机与 HTTP API，然后在 Windows 上
  * 应用策略、监听 volatile 更新、裁剪内置 shell 工具面、注入引导 section、注册卸载清理。
@@ -44,7 +44,7 @@ export function apply(ctx: AppContext, config: Config): void {
 
   // 非 Windows：DSH 默认 bash 工具已可用，本插件跳过（不注册工具、不过滤、不注册引导）。
   if (!isWindows) {
-    ctx.logger.info('[shell-policy] 非 Windows 平台，插件跳过（DSH 默认 bash 工具已可用）')
+    ctx.logger.info('[shell-manager] 非 Windows 平台，插件跳过（DSH 默认 bash 工具已可用）')
     return
   }
 
@@ -53,9 +53,9 @@ export function apply(ctx: AppContext, config: Config): void {
   const settings = ctx.get('settings') as { configure?(presentation: { auto?: boolean }): () => void } | undefined
   if (settings !== undefined && typeof settings.configure === 'function') {
     try {
-      ctx.effect(() => (settings.configure as (p: { auto?: boolean }) => () => void)({ auto: true }), 'dsh-windows-shell-policy: settings form')
+      ctx.effect(() => (settings.configure as (p: { auto?: boolean }) => () => void)({ auto: true }), 'dsh-windows-shell-manager: settings form')
     } catch (error) {
-      ctx.logger.warn('[shell-policy] settings.configure 不可用（忽略）: %s', String(error))
+      ctx.logger.warn('[shell-manager] settings.configure 不可用（忽略）: %s', String(error))
     }
   }
 
@@ -82,7 +82,7 @@ export function apply(ctx: AppContext, config: Config): void {
 
   // 引导文本：按当前已注册的 shell 工具动态生成（sections 按会话快照）。
   ctx.systemPrompt.section({
-    name: 'shell-policy',
+    name: 'shell-manager',
     order: 104,
     text: () => policy.guidanceText(),
   })
@@ -90,5 +90,5 @@ export function apply(ctx: AppContext, config: Config): void {
   // 卸载清理：注销动态注册的 shell 工具。
   ctx.effect(() => () => {
     policy.disposeAll()
-  }, 'dsh-windows-shell-policy: shell tool cleanup')
+  }, 'dsh-windows-shell-manager: shell tool cleanup')
 }

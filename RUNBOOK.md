@@ -85,7 +85,7 @@ dev_inject_plugin <本仓库目录>                        # host + UI 即时生
 
 - 其他注入器命令：`dev_reload_package`（重建 fiber，失败回滚）、`dev_uninject_plugin`（卸载即净）、`dev_install_package`（持久化到 profile bundles）。
 - 注入是**运行期**的：重启 web 后需重新注入；持久化用正式安装（`dsh plugin add`）。
-- 验证入口：DSH「插件」页 → 本插件详情页 →「Shell 工具」面板；host 侧可直读 `/dsh-shell-policy/api/status`。
+- 验证入口：DSH「插件」页 → 本插件详情页 →「Shell 工具」面板；host 侧可直读 `/dsh-shell-manager/api/status`。
 - 本次会话执行状态：**未执行**（本机 web profile 未安装本插件）。
 
 ## 7. 发布
@@ -106,6 +106,7 @@ npm publish --ignore-scripts
 # 6) 回填 CHANGELOG.md 与 README 徽章/版本引用
 ```
 
+- 发布前先确认 `package.json` 的 `name`/`repository`/`homepage`/`bugs` 与 `cordis.patch.yml`、`src/index.ts`、`src/host/context.ts` 的 `PKG_NAME` 一致（改名联动清单见 [DECISIONS.md](DECISIONS.md) D14）。
 - 已知坑：npm **staged publishing** 可能"返回成功但 registry 未出现"，重复发布报 `E409 Cannot publish over previously staged version`；等待/网页批准，或另起补丁版本号。依据：[docs/conventions.md](docs/conventions.md)。
 - **发布授权属于仓库所有者**；本文件只描述步骤，不构成执行授权（[AGENTS.md](AGENTS.md) §2.6）。
 - 本次会话执行状态：**未执行**。
@@ -114,7 +115,7 @@ npm publish --ignore-scripts
 
 ```bash
 dsh plugin --profile web add github:<owner>/<repo>
-# 或： dsh plugin --profile web add dsh-windows-shell-policy
+# 或： dsh plugin --profile web add dsh-windows-shell-manager
 # 或： dsh plugin --profile web add link:<解压目录>
 # 然后重启 dsh web
 ```

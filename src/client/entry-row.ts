@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 面板的折叠态条目行。
+ * dsh-windows-shell-manager — client 面板的折叠态条目行。
  *
  * 只显示名称、启用、默认，以及进入「配置」界面的入口；长字段都收进 EntryDetail。
  */

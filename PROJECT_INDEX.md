@@ -6,7 +6,7 @@
 
 ## 一句话定位
 
-`dsh-windows-shell-policy` 是 **DeepSeek Harness（DSH）的 Windows 多 shell 策略插件**（bundle 插件，含 host + client 两半）：把"用哪个 shell"变成一组可增删的 shell 条目，每个启用且可用的条目注册为一个独立 shell 工具，并隐藏 DSH 内置 `bash`/`pwsh`。
+`dsh-windows-shell-manager` 是 **DeepSeek Harness（DSH）的 Windows 多 shell 策略插件**（bundle 插件，含 host + client 两半）：把"用哪个 shell"变成一组可增删的 shell 条目，每个启用且可用的条目注册为一个独立 shell 工具，并隐藏 DSH 内置 `bash`/`pwsh`。
 
 ## 任务 → 位置
 
@@ -34,7 +34,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| 包名 / 版本 | `dsh-windows-shell-policy` / `0.1.1`（[package.json](package.json)） |
+| 包名 / 版本 | `dsh-windows-shell-manager` / `0.1.1`（[package.json](package.json)）；fork 自 `LAN-TINA-WS/dsh-windows-shell-policy` |
 | 入口 | host `lib/index.js`、client `lib/client.js`、bundle patch `cordis.patch.yml` |
 | 源码规模 | host：facade `src/index.ts` 38 行 + `src/host/*.ts` 9 个模块（最大 `tool.ts` 302 行）；client：`src/client/*.ts` 8 个模块（最大 `styles.ts` 400 行）。符号 → 模块见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §11 |
 | 平台 | 仅 Windows 生效；bundle 的 client `platform: web` |

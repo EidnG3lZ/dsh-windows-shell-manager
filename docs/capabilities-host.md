@@ -9,7 +9,7 @@
 | `tools` | `@deepseek-ai/dsh-tools` | 逐条目 `register(defineTool(...))` 注册 shell 工具并保存 disposer；`get(name)` 查名称是否已被内置工具 / 其它插件占用；`defineTool`、`TOOL_ABORTED` |
 | `subprocess` | `@deepseek-ai/dsh-subprocess(-local)` | `spawn({argv, cwd, stdio, graceMs, signal, env})` 执行 shell；collect 模式输出截断 + spill；`terminate` |
 | `systemPrompt` | `@deepseek-ai/dsh-system-prompt` | `section({name, order, text})` 注册引导文本（函数文本，按已注册条目动态生成）；`system-prompt/assemble` 事件裁剪工具面 |
-| `webServer` | `@deepseek-ai/dsh-host-webserver` | `register({kind:'prefix', path, handler})` 提供面板读写 API（`/dsh-shell-policy/api`） |
+| `webServer` | `@deepseek-ai/dsh-host-webserver` | `register({kind:'prefix', path, handler})` 提供面板读写 API（`/dsh-shell-manager/api`） |
 | `settings` | `@deepseek-ai/dsh-settings(-file)` | `mutate(entryId, [{op:'set', path, value}])` 持久化 `shells` 条目数组（并兼容写 `preferred`/`bashPath`）；`configure({auto})` 声明自动表单 |
 | `sandbox` | `@deepseek-ai/dsh-sandbox` | 非 `fullAccess` 条目：`confine(argv, policy)`（0.2.0 起异步）；`ESCALATION_TARGETS`、`approveEscalation`、`sandboxDenialMarker`、`validateEscalationArgs` |
 | `sandboxPolicy` | `@deepseek-ai/dsh-sandbox-policy` | `resolve({session})` → 每次调用的 standing policy（mode + workspaceRoot） |

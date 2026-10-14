@@ -1,25 +1,28 @@
-# dsh-windows-shell-policy — Windows Multi-Shell Policy Plugin
+# dsh-windows-shell-manager — Windows Multi-Shell Manager Plugin
 
 [中文](README.md) | English
 
-![Shell tools config panel](docs/screenshots/shell-policy-card.png)
+![Shell tools config panel](docs/screenshots/shell-manager-card.png)
 
-[![npm version](https://img.shields.io/npm/v/dsh-windows-shell-policy)](https://www.npmjs.com/package/dsh-windows-shell-policy)
-[![npm downloads](https://img.shields.io/npm/dw/dsh-windows-shell-policy)](https://www.npmjs.com/package/dsh-windows-shell-policy)
-[![GitHub release](https://img.shields.io/github/v/release/LAN-TINA-WS/dsh-windows-shell-policy)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases/latest)
-[![GitHub downloads](https://img.shields.io/github/downloads/LAN-TINA-WS/dsh-windows-shell-policy/total)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases)
-[![GitHub stars](https://img.shields.io/github/stars/LAN-TINA-WS/dsh-windows-shell-policy)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy)
-[![license](https://img.shields.io/github/license/LAN-TINA-WS/dsh-windows-shell-policy)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/dsh-windows-shell-manager)](https://www.npmjs.com/package/dsh-windows-shell-manager)
+[![npm downloads](https://img.shields.io/npm/dw/dsh-windows-shell-manager)](https://www.npmjs.com/package/dsh-windows-shell-manager)
+[![GitHub release](https://img.shields.io/github/v/release/EidnG3lZ/dsh-windows-shell-manager)](https://github.com/EidnG3lZ/dsh-windows-shell-manager/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/EidnG3lZ/dsh-windows-shell-manager/total)](https://github.com/EidnG3lZ/dsh-windows-shell-manager/releases)
+[![GitHub stars](https://img.shields.io/github/stars/EidnG3lZ/dsh-windows-shell-manager)](https://github.com/EidnG3lZ/dsh-windows-shell-manager)
+[![license](https://img.shields.io/github/license/EidnG3lZ/dsh-windows-shell-manager)](LICENSE)
 
-## dsh-windows-shell-policy
+## dsh-windows-shell-manager
 
-A **Windows multi-shell policy plugin** for DeepSeek Harness. DSH ships only PowerShell on Windows by default (the official `pwsh` tool), while bash dominates LLM training corpora, so agents make significantly more errors running POSIX commands. This plugin turns "which shell" into a list of **add/remove shell entries**: each entry can be enabled independently, gets an explicit or auto-probed executable path, carries a custom model-facing tool description, and can opt into **full sandbox access** — so git-bash and other compatibility-layer shells stop asking for approval on every command. Every enabled, usable entry registers as its own shell tool, and multiple shells can be enabled at once.
+A **Windows multi-shell manager plugin** for DeepSeek Harness. DSH ships only PowerShell on Windows by default (the official `pwsh` tool), while bash dominates LLM training corpora, so agents make significantly more errors running POSIX commands. This plugin turns "which shell" into a list of **add/remove shell entries**: each entry can be enabled independently, gets an explicit or auto-probed executable path, carries a custom model-facing tool description, and can opt into **full sandbox access** — so git-bash and other compatibility-layer shells stop asking for approval on every command. Every enabled, usable entry registers as its own shell tool, and multiple shells can be enabled at once.
 
-> [Latest Release](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases/latest) · [dsh-plugin ecosystem](https://github.com/topics/dsh-plugin) · [Feedback](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/issues/1)
+> [Latest Release](https://github.com/EidnG3lZ/dsh-windows-shell-manager/releases/latest) · [dsh-plugin ecosystem](https://github.com/topics/dsh-plugin) · [Feedback](https://github.com/EidnG3lZ/dsh-windows-shell-manager/issues)
+
+> **Provenance**: this project is a fork of [LAN-TINA-WS/dsh-windows-shell-policy](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy) (MIT). The upstream plugin was a single-shell picker; this fork turns it into add/remove multi-shell entry management and adds per-entry full sandbox access, launch-argument templates and display names. Upstream copyright belongs to the original author — see [LICENSE](LICENSE).
 
 ## Showcase
 
-![shell terminal card](docs/screenshots/bash-terminal-card.png)
+![llm using shells](docs/screenshots/ListAndUseShell.png)
+![shell config](docs/screenshots/ShellConfig.png)
 
 | Capability | Description |
 | --- | --- |
@@ -34,35 +37,23 @@ A **Windows multi-shell policy plugin** for DeepSeek Harness. DSH ships only Pow
 | Per-entry errors | A missing executable, a name taken by a built-in tool or another plugin, duplicate names among enabled entries, or a failed registration only affect that entry — the panel shows why and the rest keep working |
 | Terminal card | Matches the official shell tools: click a call in the conversation to inspect command, cwd, output and exit-status marker |
 | Persistence | Entries are stored in this plugin's profile entry config (`shells` array) and survive restarts; legacy `preferred`/`bashPath` are migrated to equivalent entries on first load |
-| Clean uninstall | `dsh plugin --profile web remove` or `dev_uninject_plugin` restores everything |
+| Clean uninstall | `dsh plugin --profile web remove` restores everything |
 
 ## Quick Install
 
 **GitHub direct install (recommended, fastest in CN, no npm wait)**:
 
 ```sh
-dsh plugin --profile web add github:LAN-TINA-WS/dsh-windows-shell-policy
+dsh plugin --profile web add github:EidnG3lZ/dsh-windows-shell-manager
 # restart dsh web, open the Plugins page → this plugin's detail page → the "Shell tools" panel
 ```
 
-**npm install (one command)**:
+<!-- **npm install (one command)**:
 
 ```sh
-dsh plugin --profile web add dsh-windows-shell-policy
-```
+dsh plugin --profile web add dsh-windows-shell-manager
+``` -->
 
-**Release ZIP install**:
-
-1. Download `dsh-windows-shell-policy-v*.zip` from [Releases](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases/latest) and unzip
-2. `dsh plugin --profile web add link:<unzipped dir>`
-3. Restart `dsh web`, open the Plugins page → this plugin's detail page → the "Shell tools" panel
-
-**Injector install (no restart, dev environments)**:
-
-```sh
-DSH_CHECKOUT=<checkout> bash scripts/build.sh   # produces lib/index.js + lib/client.js
-dev_inject_plugin <this dir>                   # host+UI take effect immediately
-```
 
 ## Configuration Guide
 
@@ -85,20 +76,19 @@ Open this plugin's detail page on the Plugins page; the "Shell tools" panel is t
 
 - A red `!` dot next to an entry name means that entry has a problem (hover for the reason); the configuration view shows the full reason and the runtime status.
 - To run two shells of the same kind at once (e.g. Git Bash and Cygwin): **tool names must be unique** (model side), while display names are free-form — e.g. tool names `bash` / `cygwin_bash` with display names `Git Bash` / `Cygwin`, told apart by display name in the list.
-- Switching between the list and the configuration view **keeps the scroll position**: opening a view aligns its top, returning to the list restores where you left off (page-height changes no longer lose your progress).
 - Entries take effect on the next request after saving; the guidance text is snapshotted per session, so only a new session sees new text.
-- Configuration lives in this plugin's profile entry config (the `shells` array) and survives restarts; legacy `preferred` (auto/bash/pwsh) and `bashPath` are mapped to equivalent entries while `shells` is empty and persisted on first save.
 - Entries also skip `confine` when the file policy is already `danger-full-access`; this plugin is Windows-only — on Linux/macOS it registers no tools and trims nothing.
 
 ## Feedback
 
-Issues, feature requests, usage experience: file at [issue #1 (feedback welcome)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/issues/1).
+Issues, feature requests, usage experience: file at [Issues](https://github.com/EidnG3lZ/dsh-windows-shell-manager/issues) (feedback welcome).
 
 ## Contributors
 
 | Contributor | Contribution |
 | --- | --- |
-| [LAN-TINA-WS](https://github.com/LAN-TINA-WS) | Author and maintainer |
+| [EidnG3lZ](https://github.com/EidnG3lZ) | Author and maintainer of this fork (multi-shell entries, full sandbox access, launch-argument templates) |
+| [LAN-TINA-WS](https://github.com/LAN-TINA-WS) | Author of the upstream [dsh-windows-shell-policy](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy) |
 
 ## License
 

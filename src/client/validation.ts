@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 侧的保存前预校验与名称推导。
+ * dsh-windows-shell-manager — client 侧的保存前预校验与名称推导。
  *
  * 与 host 的规则各有一份（见 DECISIONS D4 / RISKS R4）：host 负责最终校验与执行，
  * 这份只用于面板即时反馈，改 host 规则时必须同步这里。

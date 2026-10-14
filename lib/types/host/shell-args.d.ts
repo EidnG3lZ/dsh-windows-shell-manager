@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — host 侧的 shell 方言判定、启动参数模板与 argv 构造。
+ * dsh-windows-shell-manager — host 侧的 shell 方言判定、启动参数模板与 argv 构造。
  *
  * 「启动参数」是**可执行文件之后的全部参数**模板：`{command}` 占位实际命令，留空用家族默认。
  * 默认工具提示词也只有这一份（`defaultToolDescription`），面板经 POST /defaults 取它预填。

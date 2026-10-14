@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 面板的内联样式。
+ * dsh-windows-shell-manager — client 面板的内联样式。
  *
  * 与官方 PluginCard.module.css 同构（内联 style + 同一套 --dsw-alias-* CSS 变量）。
  * 注意：inline style 下不要用 border 简写（CSS 变量会被拆解丢失），必须用长写属性。

@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — host 侧的 shell 工具结果渲染与状态解析。
+ * dsh-windows-shell-manager — host 侧的 shell 工具结果渲染与状态解析。
  *
  * 渲染对齐官方 shell 工具：exit 标记在输出末尾，exit 0 不报；终端卡片把 exit 状态
  * 显示为独立 pill，因此解析时需把末尾标记从输出体拆走（`parseExitStatus`）。

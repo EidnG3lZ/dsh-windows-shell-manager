@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — host 侧的条目模型与配置读写。
+ * dsh-windows-shell-manager — host 侧的条目模型与配置读写。
  *
  * 职责：定义 ShellEntry / Config（含 schemastery schema），把任意原始值归一化成
  * 可再次落盘的条目表，做保存前整表校验，按 volatile 引用读取最新配置，并在

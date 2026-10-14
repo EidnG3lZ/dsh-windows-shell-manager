@@ -1,25 +1,28 @@
-# dsh-windows-shell-policy — Windows 多 Shell 策略插件
+# dsh-windows-shell-manager — Windows 多 Shell 管理插件
 
 中文 | [English](README.en.md)
 
-![Shell 工具配置面板](docs/screenshots/shell-policy-card.png)
+![Shell 工具配置面板](docs/screenshots/shell-manager-card.png)
 
-[![npm version](https://img.shields.io/npm/v/dsh-windows-shell-policy)](https://www.npmjs.com/package/dsh-windows-shell-policy)
-[![npm downloads](https://img.shields.io/npm/dw/dsh-windows-shell-policy)](https://www.npmjs.com/package/dsh-windows-shell-policy)
-[![GitHub release](https://img.shields.io/github/v/release/LAN-TINA-WS/dsh-windows-shell-policy)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases/latest)
-[![GitHub downloads](https://img.shields.io/github/downloads/LAN-TINA-WS/dsh-windows-shell-policy/total)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases)
-[![GitHub stars](https://img.shields.io/github/stars/LAN-TINA-WS/dsh-windows-shell-policy)](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy)
-[![license](https://img.shields.io/github/license/LAN-TINA-WS/dsh-windows-shell-policy)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/dsh-windows-shell-manager)](https://www.npmjs.com/package/dsh-windows-shell-manager)
+[![npm downloads](https://img.shields.io/npm/dw/dsh-windows-shell-manager)](https://www.npmjs.com/package/dsh-windows-shell-manager)
+[![GitHub release](https://img.shields.io/github/v/release/EidnG3lZ/dsh-windows-shell-manager)](https://github.com/EidnG3lZ/dsh-windows-shell-manager/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/EidnG3lZ/dsh-windows-shell-manager/total)](https://github.com/EidnG3lZ/dsh-windows-shell-manager/releases)
+[![GitHub stars](https://img.shields.io/github/stars/EidnG3lZ/dsh-windows-shell-manager)](https://github.com/EidnG3lZ/dsh-windows-shell-manager)
+[![license](https://img.shields.io/github/license/EidnG3lZ/dsh-windows-shell-manager)](LICENSE)
 
-## dsh-windows-shell-policy
+## dsh-windows-shell-manager
 
-DeepSeek Harness 的 **Windows 多 Shell 策略插件**。DSH 在 Windows 上默认只提供 PowerShell（官方 `pwsh` 工具），而 LLM 训练语料中 bash 占绝对多数，agent 执行 POSIX 命令时错误率显著升高。本插件把「用哪个 shell」变成一组**可增删的 shell 条目**：每条目独立启用，填写或自动探测可执行文件路径，自定义模型可见的工具提示词，并可按需开启**沙箱完全权限**——git-bash 这类依赖兼容层、需要写临时目录或工作区外的 shell 因此不再每次触发沙箱审批。每个启用且可用的条目注册为一个独立 shell 工具，多个 shell 可以同时启用。
+DeepSeek Harness 的 **Windows 多 Shell 管理插件**。DSH 在 Windows 上默认只提供 PowerShell（官方 `pwsh` 工具），而 LLM 训练语料中 bash 占绝对多数，agent 执行 POSIX 命令时错误率显著升高。本插件把「用哪个 shell」变成一组**可增删的 shell 条目**：每条目独立启用，填写或自动探测可执行文件路径，自定义模型可见的工具提示词，并可按需开启**沙箱完全权限**——git-bash 这类依赖兼容层、需要写临时目录或工作区外的 shell 因此不再每次触发沙箱审批。每个启用且可用的条目注册为一个独立 shell 工具，多个 shell 可以同时启用。
 
-> [最新 Release](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases/latest) · [dsh-plugin 生态](https://github.com/topics/dsh-plugin) · [反馈](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/issues/1)
+> [最新 Release](https://github.com/EidnG3lZ/dsh-windows-shell-manager/releases/latest) · [dsh-plugin 生态](https://github.com/topics/dsh-plugin) · [反馈](https://github.com/EidnG3lZ/dsh-windows-shell-manager/issues)
+
+> **来源**：本项目 fork 自 [LAN-TINA-WS/dsh-windows-shell-policy](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy)（MIT）。原项目是「单 shell 三选一」策略；本 fork 改为可增删的多 shell 条目管理，并新增条目级沙箱完全权限、启动参数模板、显示名等能力。上游版权归原作者，见 [LICENSE](LICENSE)。
 
 ## 成品展示
 
-![shell 终端卡片](docs/screenshots/bash-terminal-card.png)
+![llm使用配置的shell](docs/screenshots/ListAndUseShell.png)
+![shell配置页面](docs/screenshots/ShellConfig.png)
 
 | 能力 | 说明 |
 | --- | --- |
@@ -34,35 +37,22 @@ DeepSeek Harness 的 **Windows 多 Shell 策略插件**。DSH 在 Windows 上默
 | 条目级错误 | 路径未找到、工具名被内置工具或其它插件占用、启用条目间重名、注册抛错都只影响该条目，面板显示原因，其余条目照常工作 |
 | 终端卡片 | 与官方 shell 工具一致：对话页可点击查看命令、cwd、输出与 exit 状态标记 |
 | 持久化 | 条目写入本插件 profile entry config 的 `shells` 数组，重启保留；旧版 `preferred`/`bashPath` 在首次加载时自动迁移为等价条目 |
-| 卸载即净 | `dsh plugin --profile web remove` 或 `dev_uninject_plugin` 一键还原 |
+| 卸载即净 | `dsh plugin --profile web remove`一键还原 |
 
 ## 快速安装
 
 **GitHub 直装（推荐，国内网络最快，免等 npm）**：
 
 ```sh
-dsh plugin --profile web add github:LAN-TINA-WS/dsh-windows-shell-policy
+dsh plugin --profile web add github:EidnG3lZ/dsh-windows-shell-manager
 # 重启 dsh web，打开「插件」页 → 本插件详情页 → 「Shell 工具」面板开始配置
 ```
 
-**npm 安装（一条命令）**：
+<!-- **npm 安装（一条命令）**：
 
 ```sh
-dsh plugin --profile web add dsh-windows-shell-policy
-```
-
-**Release ZIP 安装**：
-
-1. 从 [Releases](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/releases/latest) 下载 `dsh-windows-shell-policy-v*.zip` 并解压
-2. `dsh plugin --profile web add link:<解压目录>`
-3. 重启 `dsh web`，打开「插件」页 → 本插件详情页 → 「Shell 工具」面板开始配置
-
-**注入器安装（免重启，开发环境）**：
-
-```sh
-DSH_CHECKOUT=<checkout> bash scripts/build.sh   # 产出 lib/index.js + lib/client.js
-dev_inject_plugin <本目录>                      # host+UI 即时生效
-```
+dsh plugin --profile web add dsh-windows-shell-manager
+``` -->
 
 ## 配置指南
 
@@ -85,20 +75,19 @@ dev_inject_plugin <本目录>                      # host+UI 即时生效
 
 - 条目名旁出现红色 `!` 圆点表示该条目有问题（鼠标悬停看原因），点「配置」可见完整原因与运行时状态。
 - 想同时启用两个同类 shell（例如 Git Bash 与 Cygwin）：**工具名必须唯一**（模型侧），但显示名可以随意取名——例如工具名 `bash` / `cygwin_bash`，显示名 `Git Bash` / `Cygwin`，列表里按显示名区分。
-- 列表与配置界面来回切换会**保持滚动位置**：进入配置界面时顶部对齐，返回列表回到离开时的位置（不会因为页面高度变化丢进度）。
 - 条目保存后下一次请求生效；引导文本按会话快照，新会话才看到新内容。
-- 配置持久化在本插件的 profile entry config（`shells` 数组），重启保留；旧版 `preferred`（auto/bash/pwsh）与 `bashPath` 在 `shells` 为空时自动映射为等价条目，首次保存时落盘。
 - 文件沙箱为 `danger-full-access` 时条目同样不 `confine`；本插件仅 Windows 生效，Linux/macOS 上不注册工具、不裁剪提示词。
 
 ## 反馈
 
-问题、需求、使用体验：提交到 [issue #1（欢迎反馈）](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy/issues/1)。
+问题、需求、使用体验：提交到 [Issues](https://github.com/EidnG3lZ/dsh-windows-shell-manager/issues)（欢迎反馈）。
 
 ## 贡献者
 
 | 贡献者 | 贡献 |
 | --- | --- |
-| [LAN-TINA-WS](https://github.com/LAN-TINA-WS) | 项目作者与维护者 |
+| [EidnG3lZ](https://github.com/EidnG3lZ) | 本 fork 的作者与维护者（多 shell 条目管理、沙箱完全权限、启动参数模板等） |
+| [LAN-TINA-WS](https://github.com/LAN-TINA-WS) | 上游项目 [dsh-windows-shell-policy](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy) 作者 |
 
 ## License
 

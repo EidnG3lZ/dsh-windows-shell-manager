@@ -1,5 +1,5 @@
 /**
- * dsh-windows-shell-policy — client 面板的单条目配置界面。
+ * dsh-windows-shell-manager — client 面板的单条目配置界面。
  *
  * 显示名 / 工具名 / 可执行文件（含探测）/ 工具提示词（含重置为默认）/
  * 沙箱完全权限 / 启动参数 / 删除；纯展示组件，状态与请求都由 ShellPolicyCard 持有。
