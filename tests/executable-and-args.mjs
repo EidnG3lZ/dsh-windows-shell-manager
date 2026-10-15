@@ -34,11 +34,9 @@ const check = (name, condition, detail) => {
   }
 }
 
-const values = { shells: [], preferred: 'auto', bashPath: '' }
+const values = { shells: [] }
 const config = {
   shells: { get: () => values.shells },
-  preferred: { get: () => values.preferred },
-  bashPath: { get: () => values.bashPath },
 }
 const tools = new Map()
 const spawnCalls = []

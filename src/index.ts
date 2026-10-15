@@ -4,7 +4,7 @@
  * 本文件是 host 的**公开入口（facade）**：只声明插件身份并重导出对外契约；
  * 实现按职责拆在 src/host/ 下，各自一个模块：
  *
- * - host/config.ts       条目模型、Config schema、归一化 / 保存校验、volatile 读取、旧配置迁移
+ * - host/config.ts       条目模型、Config schema、归一化 / 保存校验、volatile 读取
  * - host/shell-args.ts   shell 家族判定、启动参数模板解析、argv 构造、默认工具提示词
  * - host/detect.ts       可执行文件解析（绝对路径 / PATH 文件名 / 家族自动探测）
  * - host/result.ts       shell 工具结果渲染与 exit / signal 状态解析
@@ -25,7 +25,8 @@
  *    沙箱拒绝后的升级审批），也不再向模型暴露 sandbox_permissions/justification。
  * 5. 只要有本插件的条目注册成功，就在 system-prompt/assemble 隐藏 DSH 内置的
  *    bash/pwsh 工具（避免工具面出现重复 shell），并按条目生成引导提示词。
- * 6. 旧配置 preferred/bashPath 在 shells 为空时映射为等价条目（首次保存时落盘）。
+ * 6. 条目**只**来自配置里的 shells 数组：全新安装时为空，插件不生效（不注册工具、
+ *    不裁剪内置工具面、不注入引导文本），使用者必须自己添加并保存条目。
  * 7. 非 Windows 平台只保留状态 API，不注册工具、不裁剪提示词。
  */
 export { apply } from './host/apply.js'

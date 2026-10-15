@@ -40,10 +40,6 @@ export interface Config {
      * schema 投影表单），读取时用 unwrapVolatile 解包。
      */
     shells: Volatile<ShellEntry[]>;
-    /** @deprecated 旧版单 shell 首选（auto/bash/pwsh）；仅在 shells 为空时用于迁移。 */
-    preferred: Volatile<'auto' | 'bash' | 'pwsh'>;
-    /** @deprecated 旧版显式 bash 路径；仅在 shells 为空时用于迁移。 */
-    bashPath: Volatile<string>;
 }
 export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     shells: z<NoInfer<({
@@ -67,8 +63,6 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
         fullAccess: z<boolean, boolean, "defined">;
         primary: z<boolean, boolean, "defined">;
     }>>[]>, "volatile-defined">;
-    preferred: z<"pwsh" | "bash" | "auto", "pwsh" | "bash" | "auto", "volatile-defined">;
-    bashPath: z<string, string, "volatile-defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     shells: z<NoInfer<({
         id?: string | null | undefined;
@@ -91,14 +85,10 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
         fullAccess: z<boolean, boolean, "defined">;
         primary: z<boolean, boolean, "defined">;
     }>>[]>, "volatile-defined">;
-    preferred: z<"pwsh" | "bash" | "auto", "pwsh" | "bash" | "auto", "volatile-defined">;
-    bashPath: z<string, string, "volatile-defined">;
 }>>, "plain">;
 /** 插件 apply 收到的原始 config（volatile 字段为引用对象）。 */
 type RawConfig = {
     shells: unknown;
-    preferred: unknown;
-    bashPath: unknown;
 };
 /** 字符串字段读取（非字符串一律按空串处理）。 */
 declare function stringField(value: unknown): string;
@@ -113,14 +103,7 @@ declare function normalizeEntries(value: unknown): ShellEntry[];
 declare function entryLabel(entry: Pick<ShellEntry, 'label' | 'name'>): string;
 /** 保存前的整表校验（返回错误文本；undefined 表示通过）。 */
 declare function validateEntriesForSave(entries: readonly ShellEntry[]): string | undefined;
-type ResolvedConfig = {
-    shells: ShellEntry[];
-    legacyPreferred: 'auto' | 'bash' | 'pwsh';
-    legacyBashPath: string;
-};
-/** 从原始 config 读当前生效值（每次调用都取 volatile 最新快照）。 */
-declare function readConfig(raw: RawConfig): ResolvedConfig;
-/** 旧配置迁移：shells 为空时按 preferred/bashPath 生成等价条目（不落盘）。 */
-declare function migrateLegacyEntries(cfg: ResolvedConfig, onWindows: boolean): ShellEntry[];
-export { MAX_SHELL_ENTRIES, stringField, normalizeEntry, normalizeEntries, entryLabel, validateEntriesForSave, readConfig, migrateLegacyEntries, };
-export type { RawConfig, ResolvedConfig };
+/** 从原始 config 读当前生效条目（每次调用都取 volatile 最新快照；空数组就是空）。 */
+declare function readConfig(raw: RawConfig): ShellEntry[];
+export { MAX_SHELL_ENTRIES, stringField, normalizeEntry, normalizeEntries, entryLabel, validateEntriesForSave, readConfig, };
+export type { RawConfig };

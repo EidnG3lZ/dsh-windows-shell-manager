@@ -50,31 +50,31 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 ├── src/
 │   ├── index.ts             host 入口（facade）：name/inject + 重导出对外契约（38 行）
 │   ├── host/                host 实现，按职责分模块（9 个文件）
-│   │   ├── config.ts        条目模型 / Config schema / 归一化与保存校验 / volatile 读取 / 旧配置迁移（236 行）
+│   │   ├── config.ts        条目模型 / Config schema / 归一化与保存校验 / volatile 读取（206 行）
 │   │   ├── shell-args.ts    shell 家族判定 / 启动参数模板解析 / argv 构造 / 默认工具提示词（121 行）
 │   │   ├── detect.ts        可执行文件解析（绝对路径 / PATH 文件名 / 家族自动探测）（104 行）
 │   │   ├── result.ts        shell 工具结果渲染与 exit/signal 解析（55 行）
 │   │   ├── tool.ts          单条目 shell 工具定义（defineTool，含执行全链路）（302 行）
-│   │   ├── policy.ts        策略状态机（注册/注销、状态视图、引导文本）（160 行）
-│   │   ├── api.ts           面板读写 HTTP API（/dsh-shell-manager/api/*）（214 行）
+│   │   ├── policy.ts        策略状态机（注册/注销、状态视图、引导文本）（166 行）
+│   │   ├── api.ts           面板读写 HTTP API（/dsh-shell-manager/api/*）（169 行）
 │   │   ├── context.ts       DSH 服务面类型声明 / loader 反查 entry id / jobs kind 增强（56 行）
-│   │   └── apply.ts         插件装配（apply）（95 行）
+│   │   └── apply.ts         插件装配（apply）（89 行）
 │   └── client/              client 配置页，按职责分模块（8 个文件）
 │       ├── index.ts         入口：inject + 两个槽位注册（54 行）
-│       ├── card.ts          ShellPolicyCard 容器（状态 / 请求 / 视图切换与滚动保持）（361 行）
+│       ├── card.ts          ShellPolicyCard 容器（状态 / 请求 / 视图切换与滚动保持）（369 行）
 │       ├── entry-row.ts     折叠态条目行（展示组件）（73 行）
 │       ├── entry-detail.ts  单条目配置界面（展示组件）（156 行）
 │       ├── validation.ts    保存前预校验与名称推导（142 行）
 │       ├── styles.ts        全部内联样式对象（400 行）
 │       ├── icons.ts         ChevronIcon（23 行）
-│       └── types.ts         类型与常量（61 行）
+│       └── types.ts         类型与常量（59 行）
 ├── lib/                    构建产物（已提交入库）
 │   ├── index.js  index.js.map         host 入口产物
 │   ├── host/*.js  *.js.map            host 各模块产物
 │   ├── client.js client.js.map        client 产物（CJS + __ModuleLoader__ 包装，单文件）
 │   └── types/index.d.ts  types/host/*.d.ts   host 公开类型
 ├── tests/
-│   ├── host-harness.mjs    假 ctx 集成测试（61 项断言；真实 spawn git-bash / pwsh，无需启动 DSH）
+│   ├── host-harness.mjs    假 ctx 集成测试（64 项断言；真实 spawn git-bash / pwsh，无需启动 DSH）
 │   │                       —— 管道捕获输出，受限沙箱下 spawn 会 EPERM，需完全权限
 │   └── executable-and-args.mjs  可执行文件（绝对路径 / 文件名走 PATH）/ 启动参数模板 / 默认提示词 / 显示名回归（33 项断言；spawn 用记录型桩，沙箱内可跑）
 ├── docs/
@@ -134,9 +134,9 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 │                                                                                            │
 │  Config(schema, volatile) ──readConfig/normalizeEntries──► shells: ShellEntry[]             │
 │          ▲                                        │                                        │
-│          │ settings.mutate(entryId,[{op:'set'}])  │ shells 为空 → migrateLegacyEntries      │
+│          │ settings.mutate(entryId,[{op:'set'}])  │ 空数组就是空：不补全、不迁移             │
 │          │                                        ▼                                        │
-│          └──────────────────┐         currentEntries()：entries + migrated                  │
+│          └──────────────────┐         currentEntries()：ShellEntry[]                        │
 │                 HTTP API     │                     │                                        │
 │                              │         resolveShellPath()（显式路径 | 家族候选探测）        │
 │                              │                     ▼                                        │
@@ -168,7 +168,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 
 | 模块 | 职责 |
 | --- | --- |
-| [host/config.ts](../src/host/config.ts) | 条目模型、Config schema、归一化 / 保存校验、volatile 读取、旧配置迁移 |
+| [host/config.ts](../src/host/config.ts) | 条目模型、Config schema、归一化 / 保存校验、volatile 读取 |
 | [host/shell-args.ts](../src/host/shell-args.ts) | shell 家族判定、启动参数模板解析、argv 构造、默认工具提示词 |
 | [host/detect.ts](../src/host/detect.ts) | 可执行文件解析（绝对路径 / PATH 文件名 / 家族自动探测） |
 | [host/result.ts](../src/host/result.ts) | 结果渲染与 exit / signal 状态解析 |
@@ -208,13 +208,9 @@ export interface ShellEntry {
 }
 export interface Config {
   shells: Volatile<ShellEntry[]>
-  preferred: Volatile<'auto' | 'bash' | 'pwsh'>  // @deprecated 仅迁移来源
-  bashPath: Volatile<string>                     // @deprecated 仅迁移来源
 }
 export const Config = z.object({
   shells: z.array(ShellEntrySchema).default([]).volatile(),
-  preferred: z.union([z.const('auto'), z.const('bash'), z.const('pwsh')]).default('auto').volatile(),
-  bashPath: z.string().default('').volatile(),
 })
 ```
 
@@ -225,7 +221,7 @@ DSH 0.2.0 起：
 3. 读到的字段值是 `Volatile<T>` 引用，必须解包。插件用**结构检测**（有 `get()` 就当引用）而不是 `instanceof`，见 [`unwrapVolatile()`](../src/host/config.ts)——避免 cosmokit 包名不匹配问题。
 
 `path` 必须是绝对路径或纯文件名（不含目录分隔符）、启动参数模板必须含 `{command}` 占位符且引号闭合
-6. **旧配置迁移**：`shells` 为空时由 [`migrateLegacyEntries()`](../src/host/config.ts) 在内存里把旧字段映射成条目（不落盘）：`preferred=pwsh` → 未启用的 `powershell` 条目（旧 pwsh 模式等于 DSH 内置工具生效，本插件要接管时由用户打开开关）；否则 → 启用的 `bash` 条目（path 取旧 `bashPath`）。`/status` 用 `migrated` 标记，首次保存把 `shells` 写入配置。
+6. **条目只来自配置**：[`readConfig()`](../src/host/config.ts) 返回的就是 `shells` 数组，**空数组就是空**——不补全、不迁移、不生成默认条目。全新安装（profile 里没有本插件的 entry config）时列表为空、插件不生效：不注册工具、不裁剪内置工具面、不注入引导文本，使用者必须在面板「添加 shell」并保存后才生效。（旧版 `preferred` / `bashPath` 字段与迁移逻辑已随更名一并移除；profile YAML 里的残留键被 schemastery 忽略。）
 
 ### 4.3 路径解析与探测（[`resolveShellPath()`](../src/host/detect.ts)）
 
@@ -244,7 +240,7 @@ DSH 0.2.0 起：
 状态变量（[host/apply.ts](../src/host/apply.ts)）：`status`（每条目运行时状态数组）、`registeredNames`（已注册工具名）、`appliedSignature`（幂等签名）、`disposers`（条目 id → 工具注销函数）。
 
 ```
-entries   = currentEntries()                        // 配置条目，或旧配置迁移结果
+entries   = currentEntries()                        // 配置里的条目（空数组 = 插件不生效）
 signature = JSON.stringify([entries, isWindows])
 if (signature === appliedSignature) return          // 幂等守门
 disposeAll()                                        // 全量重建
@@ -305,12 +301,10 @@ for each shell of entries:
 
 | 方法 + 路径 | 行为 |
 | --- | --- |
-| `GET /dsh-shell-manager/api/status` | 返回 `{platform, supported, entries, migrated, registered: string[], registerError?, …}`；`entries` 是 [`EntryStatus[]`](../src/host/policy.ts)（条目配置字段 + `resolvedPath` + `registered` + `error`），另附旧客户端兼容字段 `effective` / `bashFound` / `bashPath` / `preferred` / `configuredBashPath`（[host/api.ts](../src/host/api.ts)） |
+| `GET /dsh-shell-manager/api/status` | 返回 `{platform, supported, entries, registered: string[], registerError?, …}`；`entries` 是 [`EntryStatus[]`](../src/host/policy.ts)（条目配置字段 + `resolvedPath` + `registered` + `error`），另附只读派生字段 `effective` / `bashFound` / `bashPath`（[host/api.ts](../src/host/api.ts)） |
 | `POST /dsh-shell-manager/api/shells` | body `{shells}`；`normalizeEntries` 归一化 → `validateEntriesForSave` 校验（≤16、名称唯一、`run_code` 保留、路径与 PATH 目录必须绝对、启动参数引号闭合）→ `settings.mutate(entryId, [{op:'set', path:['shells'], value}])`；不合法 400、落盘失败 500，均带原因（[host/api.ts](../src/host/api.ts)） |
 | `POST /dsh-shell-manager/api/detect` | body `{name, path}` → 走 `resolveShellPath` 返回 `{ok, path}`（`path` 是文件名时在 PATH 里找；留空时按家族探测；未找到时 `path: ''`）（[host/api.ts](../src/host/api.ts)） |
 | `POST /dsh-shell-manager/api/defaults` | body `{name, path, args}` → 归一化后调 [`defaultToolDescription()`](../src/host/shell-args.ts) 返回 `{ok, description}`；面板「新建条目预填」与「重置为默认」都打这个接口，模板只在 host 存在一份（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-manager/api/preferred` | 旧客户端兼容：写 `preferred`（auto \| bash \| pwsh）（[host/api.ts](../src/host/api.ts)） |
-| `POST /dsh-shell-manager/api/bashpath` | 旧客户端兼容：写 `bashPath`（[host/api.ts](../src/host/api.ts)） |
 | 其它 | 404 JSON |
 
 实现细节：请求体经 [`readJsonBody()`](../src/host/api.ts) 手写 `req.on('data'/'end'/'error')` 拼接 + `JSON.parse`（空体按 `{}`）；`settings` / entry id 缺失由 [`writeSettings()`](../src/host/api.ts) 返回原因（500）；响应统一 `content-type: application/json; charset=utf-8`。
@@ -319,7 +313,7 @@ for each shell of entries:
 
 ### 4.8 非 Windows 行为（[host/apply.ts](../src/host/apply.ts)）
 
-注册完状态 API 后**直接 return**：不注册工具、不裁剪提示词、不加引导 section（Linux/macOS 上 DSH 官方 bash 工具已可用）。此时 `/status` 返回 `supported:false`，`entries` 按配置给出静态视图（`resolvedPath:''`、`registered:false`，见 [`statusView()`](../src/host/policy.ts)），且 `migrated` 恒为 false（迁移只在 Windows 产生条目）。
+注册完状态 API 后**直接 return**：不注册工具、不裁剪提示词、不加引导 section（Linux/macOS 上 DSH 官方 bash 工具已可用）。此时 `/status` 返回 `supported:false`，`entries` 按配置给出静态视图（`resolvedPath:''`、`registered:false`，见 [`statusView()`](../src/host/policy.ts)）。
 
 ### 4.9 提示词面
 
@@ -395,7 +389,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 
 **控件**（`controls`，[client/card.ts](../src/client/card.ts)）：
 
-1. 状态行：`registerError` 存在时红字显示（按条目汇总的错误），否则显示状态摘要（未注册任何工具 / 已注册工具列表；`migrated === true` 时附加「当前条目由旧配置迁移，保存后写入配置」）。
+1. 状态行：`registerError` 存在时红字显示（按条目汇总的错误），否则显示状态摘要（未注册任何工具 / 已注册工具列表）。
 2. 条目列表（[`entryRow()`](../src/client/entry-row.ts)）：每行 = 条目名（只读 `<span>`，留空且路径也空时显示「未命名」，`title` 带说明）+ 仅在有问题时的 `!` 圆点 +「启用」checkbox +「默认」radio（title 说明用途，未启用时禁用）+「配置」按钮。
 3. 单条目配置界面（[`entryDetail()`](../src/client/entry-detail.ts)）：头部 =「‹ 返回列表」+「配置：<显示名>」+ 弹性 spacer +「删除」（仅剩 1 条时禁用）；主体 = 「显示名」输入框（占位「留空用工具名；只在面板里区分条目（例如 Git Bash / Cygwin）」，提示行说明它只影响面板显示、模型看到的仍是工具名）+「工具名」输入框（占位「留空按可执行文件名推导（pwsh 会改名为 powershell）」+ 一行「模型看到的工具名：<effectiveName>」提示）+「可执行文件」输入框与「探测」按钮同排（占位「绝对路径，或只填文件名（如 bash.exe，在 PATH 里查找）；留空自动探测」）+「工具提示词」textarea（3 行；标签行右侧是「重置为默认」按钮，调 `/defaults` 重新生成）+「沙箱完全权限」checkbox（文案说明跳过文件沙箱、不再逐次审批）+「启动参数」输入框（模板，占位「留空用默认：-c {command}（bash）/ -NoLogo -NoProfile -NonInteractive -Command {command}（pwsh）」，提示行说明 `{command}` 会被替换成实际命令、想换掉 `-c` 就改这里）；底部按需显示客户端问题（红字）、运行时状态（未编辑时显示 `运行时已生效：<resolvedPath>` / 未生效 + `error`）与探测 `notice`。
 4. 条目为空时显示空态提示。
@@ -456,7 +450,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 | `subprocess` | `@deepseek-ai/dsh-subprocess(-local)` | `spawn(spec)`；collect 读取 + spill；`terminate` | — |
 | `systemPrompt` | `@deepseek-ai/dsh-system-prompt` | `section({name, order, text})` | — |
 | `webServer` | `@deepseek-ai/dsh-host-webserver` | `register({kind:'prefix', path, handler})` | — |
-| `settings` | `@deepseek-ai/dsh-settings(-file)` | `mutate(entryId, ops)` 写 `shells` 条目数组（并兼容 `preferred`/`bashPath`）、`configure({auto})` | namespace = entry id；volatile 表单 |
+| `settings` | `@deepseek-ai/dsh-settings(-file)` | `mutate(entryId, ops)` 写 `shells` 条目数组、`configure({auto})` | namespace = entry id；volatile 表单 |
 | `sandbox` | `@deepseek-ai/dsh-sandbox` | `confine(argv, policy)`；`ESCALATION_TARGETS`、`approveEscalation`、`sandboxDenialMarker`、`validateEscalationArgs` | `confine` 变异步 |
 | `sandboxPolicy` | `@deepseek-ai/dsh-sandbox-policy` | `resolve({session})` → standing policy | — |
 | `jobs` | `@deepseek-ai/dsh-jobs` | `start({kind,label,owner,run})` | `owner` 由 Agent 实例改为 `SessionId` |
@@ -544,10 +538,10 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 3. **`fullAccess` 与运行上下文不一致**：session 沙箱策略仍是 `workspace-write` 时，运行时上下文照旧告诉模型「写入受限于工作区」，而 fullAccess 条目的命令实际不受限制；这是刻意的 per-tool 选择，但两者并存时模型可能误判。
 4. **探测候选仍不完整**：已覆盖 `%LOCALAPPDATA%\Programs\Git\bin\bash.exe`、`Git\usr\bin\bash.exe`、PATH 按名查找；仍缺 scoop shim 特判与 WSL。本机 `PATH` 里的 `bash` 是 scoop shim，只有在 Git 安装路径都没命中时才会被用到。
 5. **不加载登录 / 交互 profile**：Bash 家族固定 `-c`（无 `-l`/`-i`），PowerShell 家族固定 `-NoProfile -NonInteractive`，因此 `.bashrc` / `$PROFILE` 里的环境不会生效。这是有意的（与官方 shell 工具一致），但值得在文档里说清。
-6. **HTTP API 无鉴权**：`POST /shells`、`/detect`、`/preferred`、`/bashpath` 只做形状与值域校验（条目数 ≤16、名称唯一、路径绝对、字段长度上限），请求体经 `readJsonBody()` 手写拼接（无体积上限）；依赖 `webServer` 自身的访问控制（web 端有认证，桌面端需 token）。跨源 / 本地其它进程若能访问该端口即可改配置。
+6. **HTTP API 无鉴权**：`POST /shells`、`/detect`、`/defaults` 只做形状与值域校验（条目数 ≤16、名称唯一、路径绝对、字段长度上限），请求体经 `readJsonBody()` 手写拼接（无体积上限）；依赖 `webServer` 自身的访问控制（web 端有认证，桌面端需 token）。跨源 / 本地其它进程若能访问该端口即可改配置。
 7. **条目 error 直接透出原始错误文本**：注册抛错时写成 `工具注册失败：${String(error)}`（[host/policy.ts](../src/host/policy.ts)），面板会显示内部路径 / 堆栈首行，信息量大但对外观感一般。
 8. **升级提示依赖注册时快照**：`escalationModes` 在 `buildTool()` 里按条目的 `fullAccess` 与组合能力算一次并闭包捕获（[host/tool.ts](../src/host/tool.ts)）；组合变化后需重新 apply 才更新（与第 2 条同源风险）。
-9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（61 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（33 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
+9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（64 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（33 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
 10. **硬编码中文 UI 文案**：客户端校验与状态文案均为中文字面量（如 [client/validation.ts](../src/client/validation.ts)、[client/card.ts](../src/client/card.ts)），host 侧 API 错误同样是中文（[host/config.ts](../src/host/config.ts)），无 i18n 层；而 DSH client 是有 locale 服务的。
 11. **运行期依赖曾用错包名（v0.1.0 的真实故障，v0.1.1 修复）**：`schemastery` / `cordis` 只是 `build.sh` 建立的编译期本地别名，`vendor/*` 的真实包名是 `@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。插件从 GitHub 装进 `profiles/<name>/node_modules` 后，Node 的向上查找只在共享的 `~/.dsh/profiles/node_modules` 命中作用域名那一份 → 裸名 `ERR_MODULE_NOT_FOUND`，DSH 启动打印 `dsh-windows-shell-manager (dsh-windows-shell-manager): failed to import`，配置面板不出现。**新增任何非 `node:` 内建的 import 前，先确认用的是发布名。**
 
@@ -585,7 +579,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 2. **修文档漂移**：**已完成** —— capabilities-host / capabilities-client / README（中英）/ roadmap 已按 v0.1.0 同步（见 §9.1）。
 3. **修引导文本**：**已完成** —— `shell-policy` section 改为函数文本，按已注册条目生成，无工具时为空。
 4. **补探测候选**：**部分完成** —— 已补用户级 Git、`Git\usr\bin`、PATH 按名；仍可继续补 scoop shim 特判与 WSL。「显式路径不存在」现在会作为该条目的 `error` 显示在面板上。
-5. **建立最小回归**：**已完成（host 侧）** —— `tests/host-harness.mjs`（61 项断言）+ `tests/executable-and-args.mjs`（33 项断言）；仍缺 CI 与 client 侧测试。
+5. **建立最小回归**：**已完成（host 侧）** —— `tests/host-harness.mjs`（64 项断言）+ `tests/executable-and-args.mjs`（33 项断言）；仍缺 CI 与 client 侧测试。
 6. **i18n**：把 client 中文文案接到 DSH locale 服务（`@deepseek-ai/dsh-client-locale`）。
 7. **与 `dsh-gitbash-shell` 的定位澄清**：两者目标重叠，选其一为主或明确互斥检测——例如对方已注册同名工具时，本插件会把该条目报为「工具名已被占用」，可据此提示用户。
 8. **非 Windows 语义**（可选）：目前 Linux/macOS 直接跳过；若要做「统一 shell 策略」可扩展到 WSL / zsh。
@@ -608,7 +602,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | `sanitizeToolName` / `deriveToolName` | [host/config.ts](../src/host/config.ts) | 工具名清洗与默认推导（`pwsh` → `powershell`） |
 | `normalizeEntry` / `normalizeEntries` | [host/config.ts](../src/host/config.ts) | 条目归一化（id 去重、字段截断、primary 唯一、上限 16） |
 | `entryLabel` | [host/config.ts](../src/host/config.ts) | 面板/错误文案里的条目名（显示名优先，留空回落工具名） |
-| `validateEntriesForSave` / `readConfig` / `migrateLegacyEntries` | [host/config.ts](../src/host/config.ts) | 保存前整表校验、最新配置快照、旧配置迁移 |
+| `validateEntriesForSave` / `readConfig` | [host/config.ts](../src/host/config.ts) | 保存前整表校验、最新配置快照（空数组就是空） |
 | `PWSH_PREAMBLE` / `isPwshFamily` / `COMMAND_PLACEHOLDER` | [host/shell-args.ts](../src/host/shell-args.ts) | UTF-8 输出前缀、家族判定（`-Command` vs `-c`）、模板占位符 `{command}` |
 | `parseArgs` / `argTemplate` / `argTemplateProblem` / `buildArgv` | [host/shell-args.ts](../src/host/shell-args.ts) | 参数解析、家族默认/自定义模板与校验、argv 构造 |
 | `defaultToolDescription` | [host/shell-args.ts](../src/host/shell-args.ts) | 默认工具提示词（host 唯一来源：buildTool 回落 + `POST /defaults`） |
@@ -623,8 +617,8 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | `EntryStatus` | [host/policy.ts](../src/host/policy.ts) | 条目运行时状态形状 |
 | `createShellPolicy` | [host/policy.ts](../src/host/policy.ts) | 策略状态机工厂（对外 5 个动作：reconcile / statusView / registeredNames / guidanceText / disposeAll） |
 | `disposeAll` / `entryProblem` / `applyPolicy` / `statusView` / `guidanceText` | [host/policy.ts](../src/host/policy.ts) | 注销工具、注册失败原因、逐条目注册/注销、`/status` 视图、引导文本 |
-| `readJsonBody` / `writeSettings` / `registerStatusApi` | [host/api.ts](../src/host/api.ts) | 请求体读取、settings 落盘、status / shells / detect / **defaults** / preferred / bashpath 路由 |
-| `apply` / `currentEntries` | [host/apply.ts](../src/host/apply.ts) | 插件装配、当前生效条目（或旧配置迁移结果） |
+| `readJsonBody` / `writeSettings` / `registerStatusApi` | [host/api.ts](../src/host/api.ts) | 请求体读取、settings 落盘、status / shells / detect / defaults 路由 |
+| `apply` / `currentEntries` | [host/apply.ts](../src/host/apply.ts) | 插件装配、当前生效条目（配置里的 shells 数组） |
 | `BUILT_IN_SHELL_TOOLS` / 提示词裁剪 / 引导 section / settings form / 卸载清理 | [host/apply.ts](../src/host/apply.ts) | 内置 shell 名称、assemble 过滤、order 104 section、清理 |
 
 ### Client（[src/client/](../src/client/)）
@@ -655,7 +649,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | [cordis.patch.yml](../cordis.patch.yml) | bundle patch（插入自身行） |
 | [tsconfig.json](../tsconfig.json) / [tsdown.config.ts](../tsdown.config.ts) | host / client 构建配置 |
 | [scripts/build.sh](../scripts/build.sh) | 一键构建（探测 checkout + link 依赖 + tsc + tsdown） |
-| [tests/host-harness.mjs](../tests/host-harness.mjs) | 假 ctx 集成测试（61 项断言；真实 spawn git-bash / pwsh，不启动 DSH；受限沙箱下会 EPERM） |
+| [tests/host-harness.mjs](../tests/host-harness.mjs) | 假 ctx 集成测试（64 项断言；真实 spawn git-bash / pwsh，不启动 DSH；受限沙箱下会 EPERM） |
 | [tests/executable-and-args.mjs](../tests/executable-and-args.mjs) | 可执行文件（绝对路径 / 文件名走 PATH）/ 启动参数模板 / 默认提示词 / 显示名回归（33 项断言；spawn 记录型桩，沙箱内可跑） |
 | [docs/conventions.md](../docs/conventions.md) | 编写规范与踩坑速查（**改动前必读**） |
 
@@ -721,3 +715,39 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 - §12 记录的是同日更早的链接 / 目录更正，其中提到的 `src/index.ts#L…` 属于**拆分前**的修订；拆分后行号锚点已不存在。
 - client 侧那 9 条既有诊断与仓库「无 client 类型检查 / 无 lint」的现状一致（[RISKS.md](../RISKS.md) R8）；`src/client` 被 `tsconfig.json` 的 `exclude` 排除，本仓库既有的类型基线并不覆盖 client，是否补一条 client 类型基线另行决定。
 - 本次未改变任何运行时行为；未新增测试（沿用既有两个测试套件作为回归依据）。
+
+---
+
+## 14. 移除上游配置迁移记录（2026-10-14）
+
+> 触发原因：本插件更名后功能已不再视为上游 `dsh-windows-shell-policy` 的修改版，故不再支持迁移其配置；同时确立「条目必须由使用者确认后才生效」——默认生成的条目可能让使用者在不知情的情况下用上错误配置。
+
+### 14.1 根因（修改前）
+
+旧实现用「`shells` 为空」判定是否需要迁移，但 schema 默认值让两种来源无法区分：
+
+1. [`Config`](../src/host/config.ts) 的 `shells: default([])` / `preferred: default('auto')` / `bashPath: default('')` 让**全新安装**（profile 里没有本插件的 entry config）与**旧 `preferred: 'auto'` 用户**逐字节相同，配置里没有任何「我到底有没有被写过」的位。
+2. [`readConfig()`](../src/host/config.ts) 把非 bash/pwsh 的 `preferred` 一律归成 `'auto'`，于是 `undefined` / `''` / `'auto'` 三种来源彻底同化。
+3. [`currentEntries()`](../src/host/apply.ts) 用「空数组」判迁移，`migrated: true` **无条件**跟着这条分支走，与「是否真有旧字段」无关。
+4. [`migrateLegacyEntries()`](../src/host/config.ts) 对非 pwsh 一律造出 `[{id:'legacy-bash', name:'bash', enabled:true, ...}]`，全新安装的 `'auto'` 正落进这一支。
+5. 该条目**只在内存里**生成、从不落盘，所以只要用户不点保存，每次重启都重新「迁移」一次。
+
+### 14.2 改动
+
+- 删除 `migrateLegacyEntries()`、`ResolvedConfig` 类型、Config schema 的 `preferred` / `bashPath` 字段、`readConfig()` 的 legacy 归一化（[host/config.ts](../src/host/config.ts)）。
+- [`currentEntries()`](../src/host/apply.ts) 改为直接返回配置里的 `shells` 数组（`ShellEntry[]`），**空数组就是空**：不补全、不迁移、不生成默认条目。
+- 删除 `/status` 的 `migrated` 与 `preferred` / `configuredBashPath` 旧客户端字段，删除 `POST /preferred` 与 `POST /bashpath` 端点及 `legacy()` 依赖（[host/api.ts](../src/host/api.ts)）；client 的 `migrated` 类型与「当前条目由旧配置迁移，保存后写入配置」提示一并删除（[client/types.ts](../src/client/types.ts)、[client/card.ts](../src/client/card.ts)）。
+- 行为结果：全新安装时 `entries` 为空、插件不生效（不注册任何工具、不裁剪 DSH 内置 `bash`/`pwsh`、引导文本为空），使用者必须在面板「添加 shell」并保存后才生效。旧 profile YAML 里残留的 `preferred` / `bashPath` 键被 schemastery 忽略（实测确认），无需手工清理。
+
+### 14.3 验证（本次实际执行）
+
+| 检查 | 命令 | 结果 |
+| --- | --- | --- |
+| host 类型基线 | `npx tsc -p tsconfig.json --noEmit` | **通过**（exit 0） |
+| host 产物 + client 打包 | `tsc -p tsconfig.json` + checkout 的 tsdown（**未跑 `build.sh`**） | **通过**，产出 `lib/**` 与 `lib/client.js` |
+| host 集成测试 | `node tests/host-harness.mjs`（完全权限，真实 spawn） | **64/64 通过** |
+| 可执行文件/参数回归 | `node tests/executable-and-args.mjs` | **33/33 通过** |
+| 残留引用扫描 | grep `migrateLegacyEntries\|migrated\|legacy-bash\|configuredBashPath`（`src/`、`tests/`、`lib/`） | 仅剩新加的**否定断言**与 CHANGELOG 历史记录；`src/` 无遗留 |
+
+新增断言（替换原「全新安装迁移为启用的 bash 条目」段）：不注册任何工具、`entries` 为空、`registered` 为空、不再返回 `migrated` 字段、不裁剪内置工具面、引导文本为空、旧客户端端点 404。
+

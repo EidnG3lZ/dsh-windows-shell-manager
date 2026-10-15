@@ -60,12 +60,12 @@
 3. **全 access 跳过 `sandbox.confine`**：等同 `danger-full-access`，因此不再出现沙箱拒绝→升级审批；该工具也不再向模型暴露 `sandbox_permissions`/`justification`（硬塞会报错）。
 4. **提示词裁剪规则改为「有工具注册成功就隐藏内置 bash/pwsh」**：只隐藏名字未被本插件条目占用的内置工具；全部条目停用 / 不可用即回到 DSH 原始工具面（不注册、不裁剪）。
 5. **引导提示词改为函数文本**（`shell-policy`，order 104）：列出已注册的 shell 工具并按 `primary` 推荐优先项，没有工具时文本为空。
-6. **配置写入仍走自带 HTTP API**：新增 `POST /shells`（归一化 + 校验 + `settings.mutate(entryId, [{op:'set', path:['shells'], value}])`）与 `POST /detect`（探测候选），并保留 `/preferred`、`/bashpath` 兼容旧客户端。
-7. **旧配置迁移**：条目数组为空时，由 `preferred`/`bashPath` 在内存里映射等价条目（`pwsh` → 未启用的 `powershell` 条目，其余 → 启用的 `bash` 条目），首次保存时落盘。
+6. **配置写入仍走自带 HTTP API**：新增 `POST /shells`（归一化 + 校验 + `settings.mutate(entryId, [{op:'set', path:['shells'], value}])`）与 `POST /detect`（探测候选）；当时还保留了 `/preferred`、`/bashpath` 兼容旧客户端。
+7. **旧配置迁移**（**已撤销**）：条目数组为空时，由 `preferred`/`bashPath` 在内存里映射等价条目（`pwsh` → 未启用的 `powershell` 条目，其余 → 启用的 `bash` 条目），首次保存时落盘。项目更名后已判定不再继承上游配置，该迁移逻辑与 `preferred`/`bashPath` 字段、两个旧端点均已移除；全新安装时条目为空、插件不生效。见 [CHANGELOG.md](../CHANGELOG.md) 未发布段的破坏性变更。
 
 ### 实测验证（假 ctx 集成测试）
 
-`tests/host-harness.mjs`（45 项断言，`node tests/host-harness.mjs`）：Config schema 默认值与条目默认值、全新安装迁移为启用的 bash 条目、真实 spawn git-bash 执行并校验 exit code / stdout / stderr、渲染标记与终端卡片 exit pill 拆分、`system-prompt/assemble` 隐藏内置 pwsh 且保留自身 bash、引导文本、`/status` `/shells` `/detect` API（含重复工具名 400、合法条目写入 settings）、`fullAccess` 不调用 confine 且隐藏 / 拒绝升级参数、PowerShell 方言（`-Command`）、工具名冲突（内置占用 / 条目重复）、旧 pwsh 配置迁移、全部停用不注册不裁剪且引导文本为空，以及后台任务通道（JobOutcome / readOutput / 通用卡片）、registry 级 output schema 与参数校验、真实 settings 服务的 volatile 契约（`isVolatilePath(Config,['shells'])`）。
+`tests/host-harness.mjs`（`node tests/host-harness.mjs`）：Config schema 默认值与条目默认值、全新安装不生成条目且插件不生效、真实 spawn git-bash 执行并校验 exit code / stdout / stderr、渲染标记与终端卡片 exit pill 拆分、`system-prompt/assemble` 隐藏内置 pwsh 且保留自身 bash、引导文本、`/status` `/shells` `/detect` API（含重复工具名 400、合法条目写入 settings）、`fullAccess` 不调用 confine 且隐藏 / 拒绝升级参数、PowerShell 方言（`-Command`）、工具名冲突（内置占用 / 条目重复）、全部停用不注册不裁剪且引导文本为空，以及后台任务通道（JobOutcome / readOutput / 通用卡片）、registry 级 output schema 与参数校验、真实 settings 服务的 volatile 契约（`isVolatilePath(Config,['shells'])`）。
 
 > 注意：脚本用管道捕获子进程输出，受限文件沙箱下 spawn 管道会 EPERM，需在完全权限下运行。
 

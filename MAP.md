@@ -66,5 +66,5 @@ E:\DSHProjects\dsh-windows-shell-policy\     ← 工作区根 = git 仓库根（
 ## 5. 配置持久化位置
 
 - 条目写入**本插件 profile entry config 的 `shells` 数组**（经 host 的 `settings.mutate(entryId, …)`；settings namespace = profile entry id）。
-- 旧字段 `preferred` / `bashPath` 仅在 `shells` 为空时作为迁移来源，首次保存时落盘。
+- `shells` **空数组就是空**：不补全、不迁移。全新安装时列表为空、插件不生效，须由使用者在面板「添加 shell」并保存。
 - 面板读写不走 settings 的浏览器 RPC（apiproxy allowlist 不含本插件），而走自带 HTTP API `/dsh-shell-manager/api/*`（见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §4.7）。

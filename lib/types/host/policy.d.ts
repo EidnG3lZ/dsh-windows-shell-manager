@@ -14,11 +14,8 @@ export interface ShellPolicyDeps {
     ctx: AppContext;
     /** 是否 Windows；非 Windows 时 reconcile 不动工具面。 */
     isWindows: boolean;
-    /** 当前生效条目（配置值，或旧配置迁移结果）。 */
-    currentEntries(): {
-        entries: ShellEntry[];
-        migrated: boolean;
-    };
+    /** 当前生效条目（即配置里的 shells 数组；空数组表示插件不生效）。 */
+    currentEntries(): ShellEntry[];
 }
 export interface ShellPolicy {
     /** 按最新 volatile 配置对齐（幂等；只在 Windows 执行）。 */

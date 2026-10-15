@@ -69,8 +69,8 @@ npx tsc -p tsconfig.json --noEmit
 
 | 命令 | 覆盖 | 前置 | 本次执行状态 |
 | --- | --- | --- | --- |
-| `node tests/executable-and-args.mjs` | 可执行文件解析（绝对路径 / PATH 文件名）、启动参数模板、`/defaults` 与默认提示词一致、保存校验与归一化、显示名（spawn 为记录型桩） | 无（沙箱内可跑） | **未执行** |
-| `node tests/host-harness.mjs` | 假 ctx 集成：schema 默认值、旧配置迁移、多工具注册、真实 spawn git-bash/pwsh、渲染与终端卡片、assemble 裁剪、引导文本、HTTP API、fullAccess 不 confine、后台任务通道、settings volatile 契约 | **完全权限**（受限沙箱下管道 spawn 会 `EPERM`） | **未执行**（当前沙箱受限） |
+| `node tests/executable-and-args.mjs` | 可执行文件解析（绝对路径 / PATH 文件名）、启动参数模板、`/defaults` 与默认提示词一致、保存校验与归一化、显示名（spawn 为记录型桩） | 无（沙箱内可跑） | **已执行**（2026-10-14，33/33 通过） |
+| `node tests/host-harness.mjs` | 假 ctx 集成：schema 默认值、全新安装不生成条目且插件不生效、多工具注册、真实 spawn git-bash/pwsh、渲染与终端卡片、assemble 裁剪、引导文本、HTTP API、fullAccess 不 confine、后台任务通道、settings volatile 契约 | **完全权限**（受限沙箱下管道 spawn 会 `EPERM`） | **已执行**（2026-10-14，完全权限下 64/64 通过） |
 
 - 判定：脚本自身以非零退出表示失败；**断言条数不是契约**，以输出为准。
 - 注意：两个脚本都直接依赖 `lib/`（构建产物）还是 `src/`，请以脚本头部 import 为准（**待核实**：本次未读脚本正文）。

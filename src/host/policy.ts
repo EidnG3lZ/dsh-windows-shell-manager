@@ -26,8 +26,8 @@ export interface ShellPolicyDeps {
   ctx: AppContext
   /** 是否 Windows；非 Windows 时 reconcile 不动工具面。 */
   isWindows: boolean
-  /** 当前生效条目（配置值，或旧配置迁移结果）。 */
-  currentEntries(): { entries: ShellEntry[]; migrated: boolean }
+  /** 当前生效条目（即配置里的 shells 数组；空数组表示插件不生效）。 */
+  currentEntries(): ShellEntry[]
 }
 
 export interface ShellPolicy {
@@ -83,7 +83,7 @@ export function createShellPolicy(deps: ShellPolicyDeps): ShellPolicy {
 
   /** 按当前配置重新应用策略：解析条目、注册/注销工具。幂等。 */
   const applyPolicy = (): void => {
-    const { entries } = currentEntries()
+    const entries = currentEntries()
     const signature = JSON.stringify([entries, isWindows])
     if (signature === appliedSignature) return
     appliedSignature = signature
@@ -125,7 +125,7 @@ export function createShellPolicy(deps: ShellPolicyDeps): ShellPolicy {
   /** 条目运行时视图（非 Windows 下没有策略状态，按配置给出静态视图）。 */
   const statusView = (): EntryStatus[] => {
     if (isWindows) return status
-    return currentEntries().entries.map((shell) => ({ ...shell, resolvedPath: '', registered: false }))
+    return currentEntries().map((shell) => ({ ...shell, resolvedPath: '', registered: false }))
   }
 
   /** 引导提示词：列出已注册的 shell 工具与优先项；没有工具时不注入内容。 */

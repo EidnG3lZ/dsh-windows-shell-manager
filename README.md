@@ -36,7 +36,7 @@ DeepSeek Harness 的 **Windows 多 Shell 管理插件**。DSH 在 Windows 上默
 | 提示词裁剪 | 只要有条目注册成功，就在 `system-prompt/assemble` 隐藏 DSH 内置 `bash`/`pwsh`；全部条目停用时保持 DSH 原始工具面 |
 | 条目级错误 | 路径未找到、工具名被内置工具或其它插件占用、启用条目间重名、注册抛错都只影响该条目，面板显示原因，其余条目照常工作 |
 | 终端卡片 | 与官方 shell 工具一致：对话页可点击查看命令、cwd、输出与 exit 状态标记 |
-| 持久化 | 条目写入本插件 profile entry config 的 `shells` 数组，重启保留；旧版 `preferred`/`bashPath` 在首次加载时自动迁移为等价条目 |
+| 持久化 | 条目写入本插件 profile entry config 的 `shells` 数组，重启保留 |
 | 卸载即净 | `dsh plugin --profile web remove`一键还原 |
 
 ## 快速安装

@@ -6,8 +6,12 @@
 
 ### 破坏性变更
 
+- **移除从上游 `dsh-windows-shell-policy` 继承配置的迁移功能**：本插件更名后功能已不再视为上游项目的修改版，故不再迁移上游配置。具体移除：[`migrateLegacyEntries()`](src/host/config.ts)、Config schema 的 `preferred` / `bashPath` 字段与 `readConfig()` 的 legacy 归一化、`/status` 的 `migrated` 字段与 `preferred` / `configuredBashPath` 旧客户端字段、`POST /preferred` 与 `POST /bashpath` 两个旧端点，以及面板「当前条目由旧配置迁移，保存后写入配置」提示。
+- **全新安装不再自动生成条目**：旧实现用「`shells` 为空」判定迁移，而 schema 默认值让「全新安装」与「旧 `preferred: 'auto'` 用户」逐字节相同，于是全新安装也会在内存里生成一个启用的 `bash` 条目并注册工具（且不落盘，每次重启重新生成）。现在 [`currentEntries()`](src/host/apply.ts) 返回的就是配置里的 `shells` 数组，**空数组就是空**：全新安装时 shell 列表为空、插件不生效（不注册任何工具、不裁剪 DSH 内置 `bash`/`pwsh`、不注入引导文本），使用者必须在面板「添加 shell」并保存后才生效——避免在不知情的情况下使用并非自己确认过的条目。
+- **对使用者的影响**：从上游 `dsh-windows-shell-policy` 迁移过来的 profile 不再自动继承旧配置，需要在面板里重新添加 shell 条目。旧 profile YAML 里残留的 `preferred` / `bashPath` 键被 schemastery 忽略，无需手工清理。
+
 - **项目改名为 `dsh-windows-shell-manager`（原 `dsh-windows-shell-policy`）**：本仓库是 [LAN-TINA-WS/dsh-windows-shell-policy](https://github.com/LAN-TINA-WS/dsh-windows-shell-policy) 的 fork，功能已从「单 shell 三选一」演变为「可增删的多 shell 条目管理」，且 npm 上的原名由上游作者持有（latest `0.0.7`），因此改用独立包名发布。改动面：`package.json` 的 `name`/`repository`/`homepage`/`bugs`、`cordis.patch.yml` 的 `id`/`name`、`src/index.ts` 的 `name`、`src/host/context.ts` 的 `PKG_NAME`（反查 profile entry id，必须与包名一致）、`src/client/index.ts` 的 bundle config `key`、`tsdown.config.ts` 的 `PLUGIN_ID`、README 徽章与安装命令、`LICENSE`（保留上游版权并追加 fork 版权）。**HTTP API 路径同步改为 `/dsh-shell-manager/api/*`**（原 `/dsh-shell-policy/api/*`，client 与两个测试同步）。引导提示词 section 名与日志前缀改为 `shell-manager`。**对用户的影响**：安装命令与包名变化；已按旧包名安装的 profile 需移除后重装（配置存在旧 entry id 下，不会自动迁移）。
-- **旧配置字段兼容不变**：`shells` 数组与 `preferred`/`bashPath` 迁移逻辑未变，只是其所在 profile entry 的 id 随包名改变。
+- ~~**旧配置字段兼容不变**~~：改名当时保留了 `shells` 数组与 `preferred`/`bashPath` 迁移逻辑（其所在 profile entry 的 id 随包名改变）。该迁移逻辑随后已按本段第一条移除。
 
 ### 变更
 

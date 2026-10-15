@@ -1,5 +1,5 @@
 /**
- * 本地集成测试（假 ctx，不启动 DSH）：验证 host 侧的条目模型、旧配置迁移、
+ * 本地集成测试（假 ctx，不启动 DSH）：验证 host 侧的条目模型、全新安装不生效、
  * 多工具注册、执行链路（真实 spawn git-bash / pwsh）、提示词裁剪与 HTTP API。
  *
  * 运行：node tests/host-harness.mjs
@@ -117,8 +117,6 @@ function wireServices(harness, overrides = {}) {
 function liveConfig(values) {
   return {
     shells: { get: () => values.shells ?? [] },
-    preferred: { get: () => values.preferred ?? 'auto' },
-    bashPath: { get: () => values.bashPath ?? '' },
   }
 }
 
@@ -132,8 +130,6 @@ function pluginConfig(values) {
   }
   return {
     shells: { get: () => values.shells ?? [] },
-    preferred: { get: () => values.preferred ?? 'auto' },
-    bashPath: { get: () => values.bashPath ?? '' },
   }
 }
 
@@ -167,19 +163,35 @@ console.log('== Config schema ==')
 {
   const parsed = Config({})
   check('shells 默认空数组', Array.isArray(parsed.shells.get()) && parsed.shells.get().length === 0)
-  check('preferred 默认 auto', parsed.preferred.get() === 'auto')
-  check('bashPath 默认空串', parsed.bashPath.get() === '')
+  check('Config 只有 shells 字段', Object.keys(parsed).join(',') === 'shells', Object.keys(parsed).join(','))
   const withEntry = Config({ shells: [{ name: 'bash', enabled: true, path: GITBASH }] })
   check('数组条目解析并补默认值', withEntry.shells.get()[0]?.fullAccess === false && withEntry.shells.get()[0]?.description === '')
 }
 
-console.log('== 全新安装：默认迁移为启用的 bash 条目 ==')
+console.log('== 全新安装：不生成任何条目，插件不生效 ==')
+{
+  const h = wireServices(makeHarness({ builtinTools: ['pwsh'] }))
+  apply(h.ctx, pluginConfig({ shells: [] }))
+  check('不注册任何工具', !h.tools.has('bash') && h.tools.has('pwsh') && h.tools.size === 1, [...h.tools.keys()].join(','))
+  const status = await callApi(h.routes[0], '/dsh-shell-manager/api/status', 'GET')
+  check('entries 为空', Array.isArray(status.json.entries) && status.json.entries.length === 0, JSON.stringify(status.json.entries))
+  check('registered 为空', JSON.stringify(status.json.registered) === '[]', JSON.stringify(status.json.registered))
+  check('不再返回 migrated 字段', !Object.hasOwn(status.json, 'migrated'), JSON.stringify(Object.keys(status.json)))
+  const assembly = { sections: [], contexts: [], tools: [{ name: 'pwsh' }, { name: 'bash' }, { name: 'read' }], variables: {} }
+  const filtered = await h.listeners.get('system-prompt/assemble')(assembly, {}, async () => assembly)
+  check('不裁剪内置工具面', filtered.tools.length === 3, JSON.stringify(filtered.tools))
+  const section = h.sections.find((item) => item.name === 'shell-manager')
+  check('引导文本为空', section.text() === '', JSON.stringify(section.text()))
+  check('旧客户端端点已移除', (await callApi(h.routes[0], '/dsh-shell-manager/api/preferred', 'POST', { preferred: 'bash' })).status === 404
+    && (await callApi(h.routes[0], '/dsh-shell-manager/api/bashpath', 'POST', { bashPath: GITBASH })).status === 404)
+}
+
+console.log('== 单条目 bash：注册、执行与裁剪 ==')
 {
   const h = wireServices(makeHarness())
-  apply(h.ctx, pluginConfig({ preferred: 'auto', bashPath: '', shells: [] }))
+  apply(h.ctx, pluginConfig({ shells: [bashEntry()] }))
   check('注册 bash 工具', h.tools.has('bash'))
   const status = await callApi(h.routes[0], '/dsh-shell-manager/api/status', 'GET')
-  check('status.migrated=true', status.json.migrated === true)
   check('解析出 bash.exe', String(status.json.entries[0]?.resolvedPath ?? '').endsWith('bash.exe'), JSON.stringify(status.json.entries[0]))
   const tool = h.tools.get('bash')
   const result = await tool.execute({ command: 'echo out; echo err 1>&2; exit 3', description: 'probe' }, { callId: 'c1', signal: signal() })
@@ -263,7 +275,7 @@ console.log('== 工具名冲突 ==')
 console.log('== 显示名（区分同工具名的条目）==')
 {
   const h = wireServices(makeHarness({ builtinTools: ['pwsh'] }))
-  const values = { shells: [], preferred: 'auto', bashPath: '' }
+  const values = { shells: [] }
   apply(h.ctx, liveConfig(values))
   values.shells = [
     { id: 'e1', name: 'bash', label: 'Git Bash', enabled: true, path: GITBASH, description: '', fullAccess: false, primary: true },
@@ -292,15 +304,6 @@ console.log('== 显示名（区分同工具名的条目）==')
   check('重名保存报错带显示名', dupSave.status === 400 && String(dupSave.json.error).includes('Git Bash'), JSON.stringify(dupSave.json))
   const saved = await callApi(h.routes[0], '/dsh-shell-manager/api/shells', 'POST', { shells: [bashEntry({ label: 'Git Bash' })] })
   check('显示名落盘', saved.status === 200 && h.settingsWrites.at(-1)?.ops?.[0]?.value?.[0]?.label === 'Git Bash', JSON.stringify(h.settingsWrites.at(-1)))
-}
-
-console.log('== 旧 pwsh 配置迁移 ==')
-{
-  const h = wireServices(makeHarness({ builtinTools: ['pwsh'] }))
-  apply(h.ctx, pluginConfig({ preferred: 'pwsh', bashPath: '', shells: [] }))
-  const status = await callApi(h.routes[0], '/dsh-shell-manager/api/status', 'GET')
-  check('迁移为未启用的 powershell 条目', status.json.entries.length === 1 && status.json.entries[0].name === 'powershell' && status.json.entries[0].enabled === false, JSON.stringify(status.json.entries))
-  check('不注册工具', !h.tools.has('powershell') && !h.tools.has('bash'))
 }
 
 console.log('== 全部停用 ==')
@@ -342,10 +345,10 @@ console.log('== 后台任务通道 ==')
 console.log('== volatile 热更新（面板保存路径）==')
 {
   const h = wireServices(makeHarness({ builtinTools: ['pwsh'] }))
-  const values = { shells: [], preferred: 'auto', bashPath: '' }
+  const values = { shells: [bashEntry()] }
   apply(h.ctx, liveConfig(values))
   const initial = h.tools.get('bash')
-  check('初始迁移注册 bash', initial !== undefined)
+  check('初始按配置注册 bash', initial !== undefined)
   check('非 fullAccess 暴露升级参数', initial.parameters.properties?.sandbox_permissions !== undefined)
 
   // 面板保存 = loader 原地更新 volatile 引用 + 发 loader/volatile-update，不重挂插件。
@@ -359,7 +362,7 @@ console.log('== volatile 热更新（面板保存路径）==')
   check('热更新后 fullAccess 生效', updated.parameters.properties?.sandbox_permissions === undefined)
   check('停用条目不注册', !h.tools.has('powershell'))
   const status = await callApi(h.routes[0], '/dsh-shell-manager/api/status', 'GET')
-  check('/status 反映新配置', status.json.migrated === false && status.json.entries.length === 2 && status.json.entries[0].fullAccess === true, JSON.stringify(status.json.entries))
+  check('/status 反映新配置', status.json.entries.length === 2 && status.json.entries[0].fullAccess === true, JSON.stringify(status.json.entries))
   check('/status registered 列表', JSON.stringify(status.json.registered) === JSON.stringify(['bash']), JSON.stringify(status.json.registered))
 
   // 完全不发事件：/status 自己也应对齐（兜底自愈）。

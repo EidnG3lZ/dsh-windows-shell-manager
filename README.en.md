@@ -36,7 +36,7 @@ A **Windows multi-shell manager plugin** for DeepSeek Harness. DSH ships only Po
 | Prompt trimming | As soon as any entry registers, DSH's built-in `bash`/`pwsh` are hidden in `system-prompt/assemble`; with every entry disabled the stock DSH tool surface returns |
 | Per-entry errors | A missing executable, a name taken by a built-in tool or another plugin, duplicate names among enabled entries, or a failed registration only affect that entry — the panel shows why and the rest keep working |
 | Terminal card | Matches the official shell tools: click a call in the conversation to inspect command, cwd, output and exit-status marker |
-| Persistence | Entries are stored in this plugin's profile entry config (`shells` array) and survive restarts; legacy `preferred`/`bashPath` are migrated to equivalent entries on first load |
+| Persistence | Entries are stored in this plugin's profile entry config (`shells` array) and survive restarts. |
 | Clean uninstall | `dsh plugin --profile web remove` restores everything |
 
 ## Quick Install

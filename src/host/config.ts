@@ -2,8 +2,7 @@
  * dsh-windows-shell-manager — host 侧的条目模型与配置读写。
  *
  * 职责：定义 ShellEntry / Config（含 schemastery schema），把任意原始值归一化成
- * 可再次落盘的条目表，做保存前整表校验，按 volatile 引用读取最新配置，并在
- * shells 为空时把旧配置（preferred / bashPath）迁移成等价条目。
+ * 可再次落盘的条目表，做保存前整表校验，并按 volatile 引用读取最新配置。
  *
  * 条目字段分两用：`name` / `description` / `args` / `path` 决定模型看到的工具面与执行；
  * `label`（显示名）只用于面板显示与错误文案。
@@ -66,10 +65,6 @@ export interface Config {
    * schema 投影表单），读取时用 unwrapVolatile 解包。
    */
   shells: Volatile<ShellEntry[]>
-  /** @deprecated 旧版单 shell 首选（auto/bash/pwsh）；仅在 shells 为空时用于迁移。 */
-  preferred: Volatile<'auto' | 'bash' | 'pwsh'>
-  /** @deprecated 旧版显式 bash 路径；仅在 shells 为空时用于迁移。 */
-  bashPath: Volatile<string>
 }
 
 const ShellEntrySchema = z.object({
@@ -86,12 +81,10 @@ const ShellEntrySchema = z.object({
 
 export const Config = z.object({
   shells: z.array(ShellEntrySchema).default([]).volatile(),
-  preferred: z.union([z.const('auto'), z.const('bash'), z.const('pwsh')]).default('auto').volatile(),
-  bashPath: z.string().default('').volatile(),
 })
 
 /** 插件 apply 收到的原始 config（volatile 字段为引用对象）。 */
-type RawConfig = { shells: unknown; preferred: unknown; bashPath: unknown }
+type RawConfig = { shells: unknown }
 
 /** 解包 volatile 引用（结构检测：带 get() 的引用对象；非引用值原样返回）。 */
 function unwrapVolatile<T>(value: unknown): T {
@@ -196,30 +189,9 @@ function validateEntriesForSave(entries: readonly ShellEntry[]): string | undefi
   return undefined
 }
 
-type ResolvedConfig = { shells: ShellEntry[]; legacyPreferred: 'auto' | 'bash' | 'pwsh'; legacyBashPath: string }
-
-/** 从原始 config 读当前生效值（每次调用都取 volatile 最新快照）。 */
-function readConfig(raw: RawConfig): ResolvedConfig {
-  const preferred = unwrapVolatile(raw.preferred)
-  const bashPath = unwrapVolatile(raw.bashPath)
-  return {
-    shells: normalizeEntries(unwrapVolatile(raw.shells)),
-    legacyPreferred: preferred === 'bash' || preferred === 'pwsh' ? preferred : 'auto',
-    legacyBashPath: typeof bashPath === 'string' ? bashPath.trim().replace(/^"|"$/g, '') : '',
-  }
-}
-
-
-/** 旧配置迁移：shells 为空时按 preferred/bashPath 生成等价条目（不落盘）。 */
-function migrateLegacyEntries(cfg: ResolvedConfig, onWindows: boolean): ShellEntry[] {
-  if (!onWindows) return []
-  const base = { args: '', description: '', label: '', fullAccess: false, primary: true }
-  if (cfg.legacyPreferred === 'pwsh') {
-    // 旧 pwsh 模式 = 内置 pwsh 工具生效；迁移为未启用的 PowerShell 条目，
-    // 需要本插件接管（含完全权限）时由用户在面板打开开关。
-    return [{ id: 'legacy-pwsh', name: 'powershell', enabled: false, path: '', ...base }]
-  }
-  return [{ id: 'legacy-bash', name: 'bash', enabled: true, path: cfg.legacyBashPath, ...base }]
+/** 从原始 config 读当前生效条目（每次调用都取 volatile 最新快照；空数组就是空）。 */
+function readConfig(raw: RawConfig): ShellEntry[] {
+  return normalizeEntries(unwrapVolatile(raw.shells))
 }
 
 export {
@@ -230,6 +202,5 @@ export {
   entryLabel,
   validateEntriesForSave,
   readConfig,
-  migrateLegacyEntries,
 }
-export type { RawConfig, ResolvedConfig }
+export type { RawConfig }

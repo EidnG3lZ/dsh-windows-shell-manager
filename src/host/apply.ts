@@ -4,7 +4,7 @@
  * `apply` 只做接线：解析配置入口、创建策略状态机与 HTTP API，然后在 Windows 上
  * 应用策略、监听 volatile 更新、裁剪内置 shell 工具面、注入引导 section、注册卸载清理。
  */
-import { migrateLegacyEntries, readConfig } from './config.js'
+import { readConfig } from './config.js'
 import type { Config, RawConfig, ShellEntry } from './config.js'
 import { createShellPolicy } from './policy.js'
 import { registerStatusApi } from './api.js'
@@ -21,12 +21,11 @@ export function apply(ctx: AppContext, config: Config): void {
   // 0.2.0 起 config 的 live 字段是 volatile 引用；读取一律经 readConfig(source())。
   const entry = config as unknown as RawConfig
   const source: () => RawConfig = () => entry
-  /** 当前生效条目（配置值），以及是否来自旧配置迁移。 */
-  const currentEntries = (): { entries: ShellEntry[]; migrated: boolean } => {
-    const cfg = readConfig(source())
-    if (cfg.shells.length > 0) return { entries: cfg.shells, migrated: false }
-    return { entries: migrateLegacyEntries(cfg, isWindows), migrated: true }
-  }
+  /**
+   * 当前生效条目：**完全等于配置里的 shells 数组**，不做任何补全或迁移。
+   * 全新安装时为空，插件此时不注册任何工具、不裁剪内置工具面、不注入引导文本。
+   */
+  const currentEntries = (): ShellEntry[] => readConfig(source())
 
   const policy = createShellPolicy({ ctx, isWindows, currentEntries })
 
@@ -36,10 +35,6 @@ export function apply(ctx: AppContext, config: Config): void {
     statusView: () => policy.statusView(),
     registeredNames: () => policy.registeredNames(),
     reconcile: () => policy.reconcile(),
-    legacy: () => {
-      const cfg = readConfig(source())
-      return { preferred: cfg.legacyPreferred, bashPath: cfg.legacyBashPath }
-    },
   })
 
   // 非 Windows：DSH 默认 bash 工具已可用，本插件跳过（不注册工具、不过滤、不注册引导）。

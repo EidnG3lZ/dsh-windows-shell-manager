@@ -274,10 +274,7 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
   const controls = [
     errorLine !== null
       ? createElement('div', { key: 'status', style: errorStatusStyle }, errorLine)
-      : createElement('div', { key: 'status', style: statusStyle },
-        statusLine,
-        status?.migrated === true ? createElement('span', null, '（当前条目由旧配置迁移，保存后写入配置）') : null,
-      ),
+      : createElement('div', { key: 'status', style: statusStyle }, statusLine),
     ...(editingEntry !== null && editingIndex >= 0
       ? [createElement(EntryDetail, {
         key: editingEntry.id,

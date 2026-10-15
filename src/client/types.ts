@@ -36,7 +36,6 @@ interface Status {
   platform: string
   supported: boolean
   entries: EntryStatus[]
-  migrated: boolean
   registered: string[]
   registerError?: string
 }
