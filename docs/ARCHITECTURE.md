@@ -74,7 +74,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 │   ├── client.js client.js.map        client 产物（CJS + __ModuleLoader__ 包装，单文件）
 │   └── types/index.d.ts  types/host/*.d.ts   host 公开类型
 ├── tests/
-│   ├── host-harness.mjs    假 ctx 集成测试（64 项断言；真实 spawn git-bash / pwsh，无需启动 DSH）
+│   ├── host-harness.mjs    假 ctx 集成测试（71 项断言；真实 spawn git-bash / pwsh，无需启动 DSH）
 │   │                       —— 管道捕获输出，受限沙箱下 spawn 会 EPERM，需完全权限
 │   └── executable-and-args.mjs  可执行文件（绝对路径 / 文件名走 PATH）/ 启动参数模板 / 默认提示词 / 显示名回归（33 项断言；spawn 用记录型桩，沙箱内可跑）
 ├── docs/
@@ -381,7 +381,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 - `load()` → `fetch('/dsh-shell-manager/api/status')`，失败置 `null`（[client/card.ts](../src/client/card.ts)）。
 - `useEffect` 里首次 `load()`，并订阅 `remote.$on('settings/document-updated', load)` 实现**外部写入后自动刷新**（[client/card.ts](../src/client/card.ts)）；返回退订函数。
 - **staged 编辑**：`draft` 为 `null` 表示「未改动」，`saved = status.entries.map(toDraft)`、`entries = draft ?? saved`、`dirty = draft !== null`；`problems` 逐条目预校验，`blocked = !dirty || saving || hasProblem`（[client/card.ts](../src/client/card.ts)）。
-- `update()` / `setPrimary()`（单选，其余条目清除 primary）/ `addEntry()`（id 用时间戳 + 随机串；新增后 `openEntryConfig` 直接进它的配置界面，然后 `probe` → [`fillDefaultDescription()`](../src/client/card.ts) **把默认模板预填进「工具提示词」**）/ `removeEntry()`（至少保留 1 条；删除后 `editingId` 置空回到列表）（[client/card.ts](../src/client/card.ts)）。
+- `update()` / `setPrimary()`（单选，其余条目清除 primary）/ `addEntry()`（id 用时间戳 + 随机串；新增后 `openEntryConfig` 直接进它的配置界面，然后 `probe` → [`fillDefaultDescription()`](../src/client/card.ts) **把默认模板预填进「工具提示词」**）/ `removeEntry()`（可删到 0 条——空列表即插件不生效；删除后 `editingId` 置空回到列表）（[client/card.ts](../src/client/card.ts)）。
 - `probe(index, entry)` → `POST /detect`（body `{name, path}`）；命中则回填 `path`、名称为空时用 [`deriveName()`](../src/client/validation.ts) 推导，**并返回探测后的条目对象**供新建流程接着取默认提示词；未命中写 `notice`「未探测到可执行文件，请手动填写路径」。
 - `fillDefaultDescription(index, entry)` → `POST /defaults`（body `{name, path, args}`）把返回的 `description` 写进草稿：新建条目预填与配置界面的「重置为默认」共用它，**模板不在 client 复制**（[client/card.ts](../src/client/card.ts)）。
 - `save()` → `POST /shells` 整表提交（条目字段逐个映射）；`ok !== true` 抛错 → 「保存失败：…」；成功后清空草稿、退出配置界面并 `load()`（[client/card.ts](../src/client/card.ts)）。
@@ -391,7 +391,7 @@ ctx.on('system-prompt/assemble', async (_a, _c, next) => {
 
 1. 状态行：`registerError` 存在时红字显示（按条目汇总的错误），否则显示状态摘要（未注册任何工具 / 已注册工具列表）。
 2. 条目列表（[`entryRow()`](../src/client/entry-row.ts)）：每行 = 条目名（只读 `<span>`，留空且路径也空时显示「未命名」，`title` 带说明）+ 仅在有问题时的 `!` 圆点 +「启用」checkbox +「默认」radio（title 说明用途，未启用时禁用）+「配置」按钮。
-3. 单条目配置界面（[`entryDetail()`](../src/client/entry-detail.ts)）：头部 =「‹ 返回列表」+「配置：<显示名>」+ 弹性 spacer +「删除」（仅剩 1 条时禁用）；主体 = 「显示名」输入框（占位「留空用工具名；只在面板里区分条目（例如 Git Bash / Cygwin）」，提示行说明它只影响面板显示、模型看到的仍是工具名）+「工具名」输入框（占位「留空按可执行文件名推导（pwsh 会改名为 powershell）」+ 一行「模型看到的工具名：<effectiveName>」提示）+「可执行文件」输入框与「探测」按钮同排（占位「绝对路径，或只填文件名（如 bash.exe，在 PATH 里查找）；留空自动探测」）+「工具提示词」textarea（3 行；标签行右侧是「重置为默认」按钮，调 `/defaults` 重新生成）+「沙箱完全权限」checkbox（文案说明跳过文件沙箱、不再逐次审批）+「启动参数」输入框（模板，占位「留空用默认：-c {command}（bash）/ -NoLogo -NoProfile -NonInteractive -Command {command}（pwsh）」，提示行说明 `{command}` 会被替换成实际命令、想换掉 `-c` 就改这里）；底部按需显示客户端问题（红字）、运行时状态（未编辑时显示 `运行时已生效：<resolvedPath>` / 未生效 + `error`）与探测 `notice`。
+3. 单条目配置界面（[`entryDetail()`](../src/client/entry-detail.ts)）：头部 =「‹ 返回列表」+「配置：<显示名>」+ 弹性 spacer +「删除」（可删除任意条目，含最后一条）；主体 = 「显示名」输入框（占位「留空用工具名；只在面板里区分条目（例如 Git Bash / Cygwin）」，提示行说明它只影响面板显示、模型看到的仍是工具名）+「工具名」输入框（占位「留空按可执行文件名推导（pwsh 会改名为 powershell）」+ 一行「模型看到的工具名：<effectiveName>」提示）+「可执行文件」输入框与「探测」按钮同排（占位「绝对路径，或只填文件名（如 bash.exe，在 PATH 里查找）；留空自动探测」）+「工具提示词」textarea（3 行；标签行右侧是「重置为默认」按钮，调 `/defaults` 重新生成）+「沙箱完全权限」checkbox（文案说明跳过文件沙箱、不再逐次审批）+「启动参数」输入框（模板，占位「留空用默认：-c {command}（bash）/ -NoLogo -NoProfile -NonInteractive -Command {command}（pwsh）」，提示行说明 `{command}` 会被替换成实际命令、想换掉 `-c` 就改这里）；底部按需显示客户端问题（红字）、运行时状态（未编辑时显示 `运行时已生效：<resolvedPath>` / 未生效 + `error`）与探测 `notice`。
 4. 条目为空时显示空态提示。
 5. footer（列表与配置界面共用）：失败提示 + 弹性 spacer +「添加 shell」（≥16 条禁用）/「放弃」（未改动或保存中禁用）/「保存」（未改动、保存中或存在客户端问题时禁用）。
 
@@ -541,7 +541,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 6. **HTTP API 无鉴权**：`POST /shells`、`/detect`、`/defaults` 只做形状与值域校验（条目数 ≤16、名称唯一、路径绝对、字段长度上限），请求体经 `readJsonBody()` 手写拼接（无体积上限）；依赖 `webServer` 自身的访问控制（web 端有认证，桌面端需 token）。跨源 / 本地其它进程若能访问该端口即可改配置。
 7. **条目 error 直接透出原始错误文本**：注册抛错时写成 `工具注册失败：${String(error)}`（[host/policy.ts](../src/host/policy.ts)），面板会显示内部路径 / 堆栈首行，信息量大但对外观感一般。
 8. **升级提示依赖注册时快照**：`escalationModes` 在 `buildTool()` 里按条目的 `fullAccess` 与组合能力算一次并闭包捕获（[host/tool.ts](../src/host/tool.ts)）；组合变化后需重新 apply 才更新（与第 2 条同源风险）。
-9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（64 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（33 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
+9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（71 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（33 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
 10. **硬编码中文 UI 文案**：客户端校验与状态文案均为中文字面量（如 [client/validation.ts](../src/client/validation.ts)、[client/card.ts](../src/client/card.ts)），host 侧 API 错误同样是中文（[host/config.ts](../src/host/config.ts)），无 i18n 层；而 DSH client 是有 locale 服务的。
 11. **运行期依赖曾用错包名（v0.1.0 的真实故障，v0.1.1 修复）**：`schemastery` / `cordis` 只是 `build.sh` 建立的编译期本地别名，`vendor/*` 的真实包名是 `@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。插件从 GitHub 装进 `profiles/<name>/node_modules` 后，Node 的向上查找只在共享的 `~/.dsh/profiles/node_modules` 命中作用域名那一份 → 裸名 `ERR_MODULE_NOT_FOUND`，DSH 启动打印 `dsh-windows-shell-manager (dsh-windows-shell-manager): failed to import`，配置面板不出现。**新增任何非 `node:` 内建的 import 前，先确认用的是发布名。**
 
@@ -579,7 +579,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 2. **修文档漂移**：**已完成** —— capabilities-host / capabilities-client / README（中英）/ roadmap 已按 v0.1.0 同步（见 §9.1）。
 3. **修引导文本**：**已完成** —— `shell-policy` section 改为函数文本，按已注册条目生成，无工具时为空。
 4. **补探测候选**：**部分完成** —— 已补用户级 Git、`Git\usr\bin`、PATH 按名；仍可继续补 scoop shim 特判与 WSL。「显式路径不存在」现在会作为该条目的 `error` 显示在面板上。
-5. **建立最小回归**：**已完成（host 侧）** —— `tests/host-harness.mjs`（64 项断言）+ `tests/executable-and-args.mjs`（33 项断言）；仍缺 CI 与 client 侧测试。
+5. **建立最小回归**：**已完成（host 侧）** —— `tests/host-harness.mjs`（71 项断言）+ `tests/executable-and-args.mjs`（33 项断言）；仍缺 CI 与 client 侧测试。
 6. **i18n**：把 client 中文文案接到 DSH locale 服务（`@deepseek-ai/dsh-client-locale`）。
 7. **与 `dsh-gitbash-shell` 的定位澄清**：两者目标重叠，选其一为主或明确互斥检测——例如对方已注册同名工具时，本插件会把该条目报为「工具名已被占用」，可据此提示用户。
 8. **非 Windows 语义**（可选）：目前 Linux/macOS 直接跳过；若要做「统一 shell 策略」可扩展到 WSL / zsh。
@@ -649,7 +649,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | [cordis.patch.yml](../cordis.patch.yml) | bundle patch（插入自身行） |
 | [tsconfig.json](../tsconfig.json) / [tsdown.config.ts](../tsdown.config.ts) | host / client 构建配置 |
 | [scripts/build.sh](../scripts/build.sh) | 一键构建（探测 checkout + link 依赖 + tsc + tsdown） |
-| [tests/host-harness.mjs](../tests/host-harness.mjs) | 假 ctx 集成测试（64 项断言；真实 spawn git-bash / pwsh，不启动 DSH；受限沙箱下会 EPERM） |
+| [tests/host-harness.mjs](../tests/host-harness.mjs) | 假 ctx 集成测试（71 项断言；真实 spawn git-bash / pwsh，不启动 DSH；受限沙箱下会 EPERM） |
 | [tests/executable-and-args.mjs](../tests/executable-and-args.mjs) | 可执行文件（绝对路径 / 文件名走 PATH）/ 启动参数模板 / 默认提示词 / 显示名回归（33 项断言；spawn 记录型桩，沙箱内可跑） |
 | [docs/conventions.md](../docs/conventions.md) | 编写规范与踩坑速查（**改动前必读**） |
 
@@ -745,9 +745,16 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | --- | --- | --- |
 | host 类型基线 | `npx tsc -p tsconfig.json --noEmit` | **通过**（exit 0） |
 | host 产物 + client 打包 | `tsc -p tsconfig.json` + checkout 的 tsdown（**未跑 `build.sh`**） | **通过**，产出 `lib/**` 与 `lib/client.js` |
-| host 集成测试 | `node tests/host-harness.mjs`（完全权限，真实 spawn） | **64/64 通过** |
+| host 集成测试 | `node tests/host-harness.mjs`（完全权限，真实 spawn） | **71/71 通过** |
 | 可执行文件/参数回归 | `node tests/executable-and-args.mjs` | **33/33 通过** |
 | 残留引用扫描 | grep `migrateLegacyEntries\|migrated\|legacy-bash\|configuredBashPath`（`src/`、`tests/`、`lib/`） | 仅剩新加的**否定断言**与 CHANGELOG 历史记录；`src/` 无遗留 |
 
 新增断言（替换原「全新安装迁移为启用的 bash 条目」段）：不注册任何工具、`entries` 为空、`registered` 为空、不再返回 `migrated` 字段、不裁剪内置工具面、引导文本为空、旧客户端端点 404。
+
+### 14.4 后续：允许删空条目（同日）
+
+与 §14.2 的「空数组 = 插件不生效」保持一致，删除功能不再强制保留最后一条：client 侧原 `canRemove: entries.length > 1`（[card.ts](../src/client/card.ts)）与 [`entryDetail()`](../src/client/entry-detail.ts) 的 `disabled: saving || !canRemove` 已移除（`canRemove` prop 一并删除），「删除」现在可移除任意条目，含最后一条。host 侧无需改动——[`POST /shells`](../src/host/api.ts) 本就接受空数组。删空并保存后 DSH 内置 `bash`/`pwsh` 恢复可用（§14.2 的空状态设计意图），空列表 UI 提示为「还没有条目。点击「添加 shell」新增一个」。
+
+验证：`tests/host-harness.mjs` 新增「删空条目（保存空数组 = 插件不生效）」段（7 项断言：保存空数组被接受并落盘、注销工具、`entries`/`registered` 为空、恢复内置工具面、引导文本为空），全量 **71/71 通过**。
+
 

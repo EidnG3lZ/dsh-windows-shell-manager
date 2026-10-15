@@ -18,9 +18,9 @@
 | 工作副本含本次改名与拆分改动（新增 `src/host/`、`src/client/*.ts`、`lib/host/`、`lib/types/host/`；修改 `src/**` 标识、`lib/*`、`package.json`、`cordis.patch.yml`、`tsdown.config.ts`、`LICENSE`、两个测试与全部文档） | `git status --porcelain`（本次会话） | 已确认 |
 | 新包名 `dsh-windows-shell-manager` 在 npm 上**未被占用**（HTTP 404） | `registry.npmjs.org/dsh-windows-shell-manager`（本次核对） | 已确认 |
 | 原包名 `dsh-windows-shell-policy` 由上游作者持有（npm latest `0.0.7`，maintainer `lantianws`），故无法沿用 | npm registry（本次核对） | 已确认 |
-| 测试已实际运行（本次改动的最终验证）：`tests/host-harness.mjs` 64/64、`tests/executable-and-args.mjs` 33/33；`tsc` 基线 exit 0 | 本次会话（harness 在完全权限下运行） | 已通过 |
+| 测试已实际运行（本次改动的最终验证）：`tests/host-harness.mjs` 71/71、`tests/executable-and-args.mjs` 33/33；`tsc` 基线 exit 0 | 本次会话（harness 在完全权限下运行） | 已通过 |
 | 已移除「从上游 `dsh-windows-shell-policy` 迁移配置」功能：`migrateLegacyEntries`、Config 的 `preferred`/`bashPath`、`readConfig` 的 legacy 归一化、`/status` 的 `migrated` 与 `preferred`/`configuredBashPath`、`POST /preferred` 与 `/bashpath` 端点、面板迁移提示均已删除；`currentEntries()` 现在返回配置里的 `shells` 数组，空数组即不生效 | 本次会话直接编辑 `src/**`、`tests/**` 与文档 | 已确认 |
-| 全新安装不再生成条目：harness 新增「不注册任何工具 / entries 为空 / 不裁剪内置工具面 / 引导文本为空 / 旧端点 404」断言并通过 | `node tests/host-harness.mjs`（完全权限）**64/64 通过** | 已通过 |
+| 全新安装不再生成条目：harness 新增「不注册任何工具 / entries 为空 / 不裁剪内置工具面 / 引导文本为空 / 旧端点 404」断言并通过 | `node tests/host-harness.mjs`（完全权限）**71/71 通过** | 已通过 |
 | 本仓库无入库的 `node_modules`；本次会话复用已有 junction，直接跑 `tsc` + `tsdown`（**未跑 `build.sh`**，避免其 `rmSync`+symlink 在受限沙箱下 `EPERM`） | `git status` 不含 `node_modules`（被 `.gitignore` 忽略） | 已确认（junction 未入库） |
 | DSH checkout `E:\DSHSource\current` 已 bootstrap（有 `node_modules`），`dsh --version` = `0.2.0-rc.2` | 本次核对 | 已确认 |
 | web profile 未安装本插件（`node_modules/dsh-windows-shell-manager` 不存在，bundles/deps 无该项），无 disabled/patch 残留 | 读 profile `package.json` + grep `cordis.patch.yml` | 已确认 |
@@ -29,7 +29,7 @@
 ## 阻塞
 
 - 无硬阻塞。
-- 受限文件沙箱下 `tests/host-harness.mjs` 无法完整运行（真实 spawn 走管道会 `EPERM`）；本次已在用户批准的一次性完全权限下跑通（64/64）。后续再跑仍需完全权限。
+- 受限文件沙箱下 `tests/host-harness.mjs` 无法完整运行（真实 spawn 走管道会 `EPERM`）；本次已在用户批准的一次性完全权限下跑通（71/71）。后续再跑仍需完全权限。
 
 ## 下一步（建议，未执行）
 

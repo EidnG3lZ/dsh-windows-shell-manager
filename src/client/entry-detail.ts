@@ -19,14 +19,13 @@ export function EntryDetail(props: {
   runtime: EntryStatus | undefined
   dirty: boolean
   saving: boolean
-  canRemove: boolean
   onUpdate(index: number, patch: Partial<DraftEntry>): void
   onProbe(index: number, entry: DraftEntry): void
   onResetDescription(index: number, entry: DraftEntry): void
   onRemove(index: number): void
   onBack(): void
 }): ReturnType<typeof createElement> {
-  const { entry, index, problemText, runtime, dirty, saving, canRemove, onUpdate, onProbe, onResetDescription, onRemove, onBack } = props
+  const { entry, index, problemText, runtime, dirty, saving, onUpdate, onProbe, onResetDescription, onRemove, onBack } = props
   const notice = entry.notice !== undefined
     ? createElement('div', { key: 'notice', style: fieldHintStyle }, entry.notice)
     : null
@@ -58,7 +57,7 @@ export function EntryDetail(props: {
         key: 'remove',
         type: 'button',
         style: ghostStyle,
-        disabled: saving || !canRemove,
+        disabled: saving,
         onClick: () => onRemove(index),
       }, '删除'),
     ),

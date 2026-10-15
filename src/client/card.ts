@@ -284,7 +284,6 @@ export function ShellPolicyCard(props: { view?: 'summary' | 'page'; remote: Clie
         runtime: status?.entries.find((item) => item.id === editingEntry.id),
         dirty,
         saving,
-        canRemove: entries.length > 1,
         onUpdate: update,
         onProbe: (index, entry) => { void probe(index, entry) },
         onResetDescription: (index, entry) => { void fillDefaultDescription(index, entry) },

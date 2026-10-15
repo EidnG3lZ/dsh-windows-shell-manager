@@ -186,6 +186,29 @@ console.log('== 全新安装：不生成任何条目，插件不生效 ==')
     && (await callApi(h.routes[0], '/dsh-shell-manager/api/bashpath', 'POST', { bashPath: GITBASH })).status === 404)
 }
 
+console.log('== 删空条目（保存空数组 = 插件不生效）==')
+{
+  const h = wireServices(makeHarness({ builtinTools: ['pwsh'] }))
+  const values = { shells: [bashEntry()] }
+  apply(h.ctx, liveConfig(values))
+  check('起始注册 bash', h.tools.has('bash'))
+  // 面板把最后一条也删掉 → 整表保存空数组（host 必须接受，而不是 400）。
+  const saved = await callApi(h.routes[0], '/dsh-shell-manager/api/shells', 'POST', { shells: [] })
+  check('保存空数组被接受', saved.status === 200 && JSON.stringify(saved.json.shells) === '[]', JSON.stringify(saved.json))
+  check('空数组落盘', JSON.stringify(h.settingsWrites.at(-1)?.ops?.[0]?.value) === '[]', JSON.stringify(h.settingsWrites.at(-1)))
+  // 落盘后 loader 原地更新 volatile 引用并广播事件。
+  values.shells = []
+  h.emit('loader/volatile-update')
+  check('删空后注销工具', !h.tools.has('bash') && h.tools.size === 1, [...h.tools.keys()].join(','))
+  const status = await callApi(h.routes[0], '/dsh-shell-manager/api/status', 'GET')
+  check('删空后 entries 为空', status.json.entries.length === 0 && status.json.registered.length === 0, JSON.stringify(status.json.entries))
+  const assembly = { sections: [], contexts: [], tools: [{ name: 'pwsh' }, { name: 'bash' }, { name: 'read' }], variables: {} }
+  const filtered = await h.listeners.get('system-prompt/assemble')(assembly, {}, async () => assembly)
+  check('删空后恢复内置工具面', filtered.tools.length === 3, JSON.stringify(filtered.tools))
+  const section = h.sections.find((item) => item.name === 'shell-manager')
+  check('删空后引导文本为空', section.text() === '', JSON.stringify(section.text()))
+}
+
 console.log('== 单条目 bash：注册、执行与裁剪 ==')
 {
   const h = wireServices(makeHarness())

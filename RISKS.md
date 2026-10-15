@@ -14,7 +14,7 @@
 | R5 | **升级提示依赖注册时快照**：`escalationModes` 在 `buildTool()` 里按条目 `fullAccess` 与组合能力算一次并闭包捕获 | 组合变化后需重新 apply 才更新；与 D8 同源（volatile 不重挂） | `reconcile()` 兜底对齐 | ARCH §9.2 第 8 条 |
 | R6 | **探测候选不完整**：未覆盖 WSL 与 scoop shim 特判；非 `bash.exe` 命名的 shell 需显式路径或放进 PATH | 部分环境需要手工填路径，否则条目报"未探测到可执行文件" | 显式路径 / 纯文件名 + 面板「探测」按钮；未命中时按条目报错 | ARCH §9.2 第 4 条、§10.2 第 4 项 |
 | R7 | **不加载登录/交互 profile**：bash 固定 `-c`、PowerShell 固定 `-NoProfile -NonInteractive` | `.bashrc` / `$PROFILE` 里的环境不生效，用户可能误以为已加载 | 与官方 shell 工具语义一致；可用 `args` 模板自行调整 | ARCH §9.2 第 5 条 |
-| R8 | **无 CI / lint / format 配置**；client 侧无自动化测试 | 回归依赖人工执行；client UI 改动只能靠手动验证 | 两个本地测试脚本（64 / 33 项断言） | ARCH §9.2 第 9 条 |
+| R8 | **无 CI / lint / format 配置**；client 侧无自动化测试 | 回归依赖人工执行；client UI 改动只能靠手动验证 | 两个本地测试脚本（71 / 33 项断言） | ARCH §9.2 第 9 条 |
 | R9 | **系统提示与工具面刷新时机不同**：sections 按会话快照，tools 按请求刷新 | 已开始的会话可能仍看到旧引导文本，用户以为配置没生效 | 文档/README 已说明"新会话生效" | CV「Host 侧」、CH 0.1.0 |
 | R10 | **与同类插件 `dsh-gitbash-shell` 目标重叠** | 同时启用可能争抢同名工具 / 提示词面（本机会把冲突条目报"工具名已被占用"） | 冲突时条目级报错、互不影响其它条目；选型需人工决定 | ARCH §8、§10.2 第 7 项 |
 
