@@ -7,11 +7,15 @@ declare function executablePathProblem(path: string): string | undefined;
 declare function pathCandidates(names: readonly string[]): string[];
 /** bash 家族探测候选（Git for Windows 系统级/用户级、MSYS2、Cygwin、PATH）。 */
 declare function bashCandidates(name: string): string[];
-/** PowerShell 家族探测候选（PowerShell 7 安装位置、PATH、Windows PowerShell 5.1）。 */
+/**
+ * PowerShell 家族探测候选（PowerShell 7 安装位置、MSIX / Store 别名、PATH、Windows PowerShell 5.1）。
+ * 显式列出 `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`：Store 版安装的**应用执行别名**
+ * 固定落在这里，这样即使该目录不在 PATH 里也能探测到。
+ */
 declare function pwshCandidates(name: string): string[];
 /**
- * 解析条目的可执行文件：
- * - `path` 是绝对路径 → 直接用（不存在则条目不可用）；
+ * 解析条目的可执行文件（存在性一律走 [`isSpawnableFile()`]，因此 Store 应用执行别名算命中）：
+ * - `path` 是绝对路径 → 直接用（不可用则条目不可用）；
  * - `path` 只是文件名 → 在进程 PATH 里查找（命中即用它的绝对路径，**不回落**家族候选，
  *   避免「填了 A 却起了 B」）；
  * - `path` 留空 → 按家族内置候选探测（候选里也包含 PATH）。

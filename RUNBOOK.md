@@ -9,7 +9,7 @@
 | 前置 | 说明 | 本次核对 |
 | --- | --- | --- |
 | DSH checkout（含 `packages/` 与 `node_modules`） | 构建/类型检查的 tsc、tsdown 来源 | `E:\DSHSource\current`，已 bootstrap，`dsh --version` = `0.2.0-rc.2` |
-| 本仓库 `node_modules`（junction 依赖） | 类型检查与构建需要 | **不存在**（需先跑 `build.sh` 或手工建 link） |
+| 本仓库 `node_modules`（junction 依赖） | 类型检查与构建需要 | **存在**（2026-10-15 核验：junction 指向 checkout `E:\DSHSource\current`）；被清理过时需先跑 `build.sh` 或手工建 link |
 | 完全权限会话 | `tests/host-harness.mjs` 真实 spawn 走管道，受限沙箱下 EPERM | 当前为 `workspace-write`，故该测试本次**未执行** |
 
 > ⚠️ **受限沙箱下不要跑 `bash scripts/build.sh`（换 shell 也绕不过）**：`link_pkg` 建的 junction target 全在工作区外，沙箱只拒绝**工作区外 target** 的符号链接/目录联接 → 第一步就 `EPERM`，且旧 junction 已被 `rmSync` 删掉（2026-10-09 实测；依据：[docs/conventions.md](docs/conventions.md)、[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §9.3）。顺带：受限沙箱内 **git-bash 无法启动**（`couldn't create signal pipe, Win32 error 5`），PATH 的 `bash` 是原生 applet shell、`niu`（Niubash，`D:\Scoop\shims\niu.exe`）是可用的 bash 替代（两者都不认 `/e/...`，脚本里写 `E:/...`）。受限文件沙箱内改代码请走 §3 的手动路径。
@@ -53,7 +53,7 @@ DSH_CHECKOUT=<checkout 路径> "<checkout>/node_modules/.bin/tsc" -p tsconfig.js
 node "<checkout>/node_modules/tsdown/dist/run.mjs"
 ```
 
-- 前置：`node_modules` 的 junction 已由**之前一次** `build.sh` 建立；本仓库当前无 `node_modules`，所以这条路径**现在还不能直接用**——要么先在完全权限下跑一次 `build.sh`，要么手工建立同样的 link（手工建 link 同样受「target 在工作区外」限制，需要完全文件权限）。
+- 前置：`node_modules` 的 junction 已由**之前一次** `build.sh` 建立（2026-10-15 核验：junction 已在、指向 checkout `E:\DSHSource\current`，这条路径当前可直接用；仓库被清理过的话要先在完全权限下跑一次 `build.sh`，或手工建立同样的 link——手工建 link 同样受「target 在工作区外」限制，需要完全文件权限）。
 - 本次会话执行状态：**未执行**。
 
 ## 4. 类型基线
@@ -63,13 +63,13 @@ npx tsc -p tsconfig.json --noEmit
 ```
 
 - 前置：`node_modules` junction 就绪（同 §3）。
-- 本次会话执行状态：**未执行**（仓库无 `node_modules`）。
+- 本次会话执行状态：**已执行**（2026-10-15，`tsc -p tsconfig.json --noEmit` exit 0；走 checkout 的 `.bin/tsc.cmd`，依赖已存在的 junction，**未跑 `build.sh`**）。
 
 ## 5. 回归测试
 
 | 命令 | 覆盖 | 前置 | 本次执行状态 |
 | --- | --- | --- | --- |
-| `node tests/executable-and-args.mjs` | 可执行文件解析（绝对路径 / PATH 文件名）、启动参数模板、`/defaults` 与默认提示词一致、保存校验与归一化、显示名（spawn 为记录型桩） | 无（沙箱内可跑） | **已执行**（2026-10-14，33/33 通过） |
+| `node tests/executable-and-args.mjs` | 可执行文件解析（绝对路径 / PATH 文件名 / MSIX 应用执行别名）、启动参数模板、`/defaults` 与默认提示词一致、保存校验与归一化、显示名（spawn 为记录型桩） | 无（沙箱内可跑）；MSIX 用例需本机存在 Store 应用别名，否则该组跳过 | **已执行**（2026-10-15，37/37 通过） |
 | `node tests/host-harness.mjs` | 假 ctx 集成：schema 默认值、全新安装不生成条目且插件不生效、多工具注册、真实 spawn git-bash/pwsh、渲染与终端卡片、assemble 裁剪、引导文本、HTTP API、fullAccess 不 confine、后台任务通道、settings volatile 契约 | **完全权限**（受限沙箱下管道 spawn 会 `EPERM`） | **已执行**（2026-10-14，完全权限下 71/71 通过） |
 
 - 判定：脚本自身以非零退出表示失败；**断言条数不是契约**，以输出为准。

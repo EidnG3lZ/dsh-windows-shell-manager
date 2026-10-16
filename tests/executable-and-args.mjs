@@ -6,11 +6,12 @@
  * 子进程，因此不受「受限沙箱不能开管道」的限制（host-harness 需要完全权限）。
  * 覆盖：path 为绝对路径 / 文件名（在 PATH 里查，无扩展名自动补 .exe）/ 空（家族探测）、
  * 非法 path 被拒、启动参数模板（含 {command} 占位符与 -c 开关替换）、PowerShell 家族方言、
- * /defaults 与工具回落文本一致、/detect、保存校验与字段归一化上限。
+ * /defaults 与工具回落文本一致、/detect、保存校验与字段归一化上限、
+ * MSIX / Store 应用执行别名（重解析点：existsSync 打不开、lstat 看得见；机器相关，取不到样例时跳过）。
  *
  * 运行：node tests/executable-and-args.mjs
  */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply } from '../lib/index.js'
@@ -200,6 +201,41 @@ live([
   entry({ id: 'e2', name: 'cygwin_bash', label: 'Cygwin', path: FAKE_BASH, primary: false }),
 ])
 check('不同工具名的条目可共存（靠显示名区分）', tools.has('bash') && tools.has('cygwin_bash'), [...tools.keys()].join(','))
+
+// 6) MSIX / Microsoft Store 的「应用执行别名」是重解析点：跟随它会被系统以 EACCES 拒绝，
+//    因此 existsSync/stat 看不见它（Store 版 pwsh 探测不到的根因），必须用 lstat 判定。
+//    样例从本机 %LOCALAPPDATA%\Microsoft\WindowsApps 动态取（本机没装任何 Store 应用时跳过）。
+function findAppExecutionAlias() {
+  const dir = join(process.env.LOCALAPPDATA ?? '', 'Microsoft', 'WindowsApps')
+  let names
+  try { names = readdirSync(dir) } catch { return undefined }
+  for (const name of names) {
+    if (!/\.exe$/i.test(name) || !/^[A-Za-z][A-Za-z0-9_.-]*$/.test(name.slice(0, -4))) continue
+    const candidate = join(dir, name)
+    try {
+      if (!existsSync(candidate) && lstatSync(candidate).isSymbolicLink()) return { name, path: candidate, dir }
+    } catch { /* 条目不可读：跳过 */ }
+  }
+  return undefined
+}
+
+const alias = findAppExecutionAlias()
+if (alias === undefined) {
+  console.log('  skip 本机 WindowsApps 里没有 MSIX 应用执行别名样例，跳过第 6 组')
+} else {
+  check('别名样例确实是 existsSync 看不见的重解析点（复现原始故障）',
+    !existsSync(alias.path) && lstatSync(alias.path).isSymbolicLink(), alias.path)
+  const aliasAbs = await callApi('/dsh-shell-manager/api/detect', 'POST', { name: alias.name, path: alias.path })
+  check('绝对路径指向 MSIX 别名 → 探测命中', aliasAbs.json.path === alias.path, JSON.stringify(aliasAbs.json))
+  process.env.PATH = alias.dir + ';' + process.env.PATH
+  const aliasName = await callApi('/dsh-shell-manager/api/detect', 'POST', { name: alias.name, path: alias.name })
+  check('纯文件名走 PATH 命中 MSIX 别名', aliasName.json.path === alias.path, JSON.stringify(aliasName.json))
+  live([entry({ name: alias.name.slice(0, -4), path: alias.name })])
+  const aliasStatus = await callApi('/dsh-shell-manager/api/status', 'GET')
+  check('别名条目解析出 resolvedPath（面板不再报「未找到可执行文件」）',
+    aliasStatus.json.entries[0]?.resolvedPath === alias.path, JSON.stringify(aliasStatus.json.entries[0]))
+  process.env.PATH = ORIGINAL_PATH
+}
 
 process.env.PATH = ORIGINAL_PATH
 rmSync(BIN, { recursive: true, force: true })

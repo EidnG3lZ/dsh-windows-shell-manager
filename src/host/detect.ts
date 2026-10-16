@@ -3,8 +3,12 @@
  *
  * `path` 支持三种形态：绝对路径 / 纯文件名（在进程 PATH 里查找，命中即用、不回落家族候选）
  * / 留空（按家族内置候选探测 Git for Windows、MSYS2、Cygwin、PowerShell 与 PATH）。
+ *
+ * 「有没有这个可执行文件」一律用 `lstat` 判定，不用 `existsSync`/`stat`：MSIX / Microsoft Store
+ * 应用的**应用执行别名**是重解析点，跟随它会被系统以 `EACCES` 拒绝（`existsSync` 返回 false），
+ * 于是 Store 安装的 pwsh 被当成不存在；`lstat` 只打开条目本身就能看见它。
  */
-import { existsSync } from 'node:fs'
+import { lstatSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 import { isPwshFamily } from './shell-args.js'
 import type { ShellEntry } from './config.js'
@@ -12,6 +16,24 @@ import type { ShellEntry } from './config.js'
 /** `path` 是否只是可执行文件名（不含目录分隔符与盘符）。 */
 function isBareExecutableName(value: string): boolean {
   return !/[\\/]/.test(value) && !/^[A-Za-z]:/.test(value)
+}
+
+/**
+ * 候选路径能否作为可执行文件 spawn。
+ *
+ * 用 `lstat`（**不跟随重解析点**）而不是 `existsSync`/`stat`：MSIX / Microsoft Store 的
+ * 应用执行别名（如 `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`）是重解析点，跟随它
+ * 会被系统以 `EACCES` 拒绝、`existsSync` 因此返回 false（Store 版 pwsh 探测不到的根因）；
+ * `lstat` 只打开条目本身，能看见别名。别名在 Node 新版报成符号链接、旧版报成普通文件，
+ * CreateProcess 两种形态都能解析，故两者都算存在；真目录不算。
+ */
+function isSpawnableFile(candidate: string): boolean {
+  try {
+    const stat = lstatSync(candidate)
+    return stat.isFile() || stat.isSymbolicLink()
+  } catch {
+    return false
+  }
 }
 
 /** 校验 `path` 的值域：空（自动探测）/ 绝对路径 / 纯文件名（在 PATH 里查找）。 */
@@ -50,20 +72,28 @@ function bashCandidates(name: string): string[] {
   ]
 }
 
-/** PowerShell 家族探测候选（PowerShell 7 安装位置、PATH、Windows PowerShell 5.1）。 */
+/**
+ * PowerShell 家族探测候选（PowerShell 7 安装位置、MSIX / Store 别名、PATH、Windows PowerShell 5.1）。
+ * 显式列出 `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`：Store 版安装的**应用执行别名**
+ * 固定落在这里，这样即使该目录不在 PATH 里也能探测到。
+ */
 function pwshCandidates(name: string): string[] {
   const programFiles = process.env.ProgramFiles ?? 'C:\\Program Files'
+  const localAppData = process.env.LOCALAPPDATA
   const systemRoot = process.env.SystemRoot ?? 'C:\\Windows'
   return [
     join(programFiles, 'PowerShell', '7', 'pwsh.exe'),
+    ...localAppData !== undefined
+      ? [join(localAppData, 'Microsoft', 'WindowsApps', 'pwsh.exe')]
+      : [],
     ...pathCandidates([name === 'powershell' || name === 'pwsh' ? 'pwsh' : name, 'pwsh']),
     join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
   ]
 }
 
 /**
- * 解析条目的可执行文件：
- * - `path` 是绝对路径 → 直接用（不存在则条目不可用）；
+ * 解析条目的可执行文件（存在性一律走 [`isSpawnableFile()`]，因此 Store 应用执行别名算命中）：
+ * - `path` 是绝对路径 → 直接用（不可用则条目不可用）；
  * - `path` 只是文件名 → 在进程 PATH 里查找（命中即用它的绝对路径，**不回落**家族候选，
  *   避免「填了 A 却起了 B」）；
  * - `path` 留空 → 按家族内置候选探测（候选里也包含 PATH）。
@@ -72,11 +102,11 @@ function pwshCandidates(name: string): string[] {
 function resolveShellPath(entry: ShellEntry): string {
   if (entry.path.length > 0) {
     if (isBareExecutableName(entry.path)) return resolveExecutableInPath(entry.path)
-    return existsSync(entry.path) ? entry.path : ''
+    return isSpawnableFile(entry.path) ? entry.path : ''
   }
   const candidates = isPwshFamily(entry) ? pwshCandidates(entry.name) : bashCandidates(entry.name)
   for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate
+    if (isSpawnableFile(candidate)) return candidate
   }
   return ''
 }
@@ -87,7 +117,7 @@ function resolveShellPath(entry: ShellEntry): string {
  */
 function resolveExecutableInPath(name: string): string {
   for (const candidate of pathCandidates([name])) {
-    if (existsSync(candidate)) return candidate
+    if (isSpawnableFile(candidate)) return candidate
   }
   return ''
 }

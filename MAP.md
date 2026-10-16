@@ -1,6 +1,6 @@
 # MAP.md — 目录 / 版本 / 配置 / 部署映射
 
-> 定位"要改哪里、跑的是哪一份"时读。核验：2026-10-09，范围＝本工作副本 + 本机 web profile（未写入私有设备路径，按需替换）。
+> 定位"要改哪里、跑的是哪一份"时读。核验：2026-10-15（在 2026-10-09 版上只更正 `node_modules` 一句），范围＝本工作副本 + 本机 web profile（未写入私有设备路径，按需替换）。
 > 变动时更新本文件；**不虚构环境**，未核实项显式标注。
 
 ## 1. 目录结构（本仓库）
@@ -27,7 +27,7 @@ E:\DSHProjects\dsh-windows-shell-policy\     ← 工作区根 = git 仓库根（
 └── LICENSE                   MIT
 ```
 
-说明：仓库**没有** `node_modules`（工作副本未安装依赖）；`.gitignore` 只忽略 `node_modules/`、`*.tsbuildinfo`、`*.tgz`、`*.zip`，因此 `lib/` 是有意提交的。
+说明：仓库**不提交** `node_modules`（`.gitignore` 只忽略 `node_modules/`、`*.tsbuildinfo`、`*.tgz`、`*.zip`；工作副本当前有指向 checkout 的 junction 依赖，2026-10-15 核验），因此 `lib/` 是有意提交的。
 
 ## 2. 版本
 

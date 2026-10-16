@@ -1,7 +1,7 @@
 # NOW.md — 当前状态
 
 > 接续任务时读本文件；**状态实质变化时直接修订本节**，不追加矛盾快照。
-> 核验：2026-10-09，范围＝本仓库工作副本（`E:\DSHProjects\dsh-windows-shell-policy`，`main`）。
+> 核验：2026-10-15（在 2026-10-09 版上增补 MSIX / Store pwsh 探测修复一行），范围＝本仓库工作副本（`E:\DSHProjects\dsh-windows-shell-policy`，`main`）。
 
 ## 当前目标
 
@@ -25,6 +25,7 @@
 | DSH checkout `E:\DSHSource\current` 已 bootstrap（有 `node_modules`），`dsh --version` = `0.2.0-rc.2` | 本次核对 | 已确认 |
 | web profile 未安装本插件（`node_modules/dsh-windows-shell-manager` 不存在，bundles/deps 无该项），无 disabled/patch 残留 | 读 profile `package.json` + grep `cordis.patch.yml` | 已确认 |
 | web profile 依赖里存在同类插件 `dsh-gitbash-shell@0.33.0` | profile `package.json` deps | 已确认（冲突影响未评估） |
+| MSIX / Microsoft Store 版 pwsh 探测修复：存在性判定 `existsSync` → `lstat`（认应用执行别名重解析点），并显式补 `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe` 候选 | 本次会话编辑 `src/host/detect.ts`、`tests/executable-and-args.mjs`，重建 `lib/host/detect.js`；`node tests/executable-and-args.mjs` **37/37 通过**、`tsc` 基线 exit 0；`git status` 显示这 5 个文件为已修改（**未提交**）。依据与取舍见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §4.3、[RISKS.md](RISKS.md) R6 | 已通过（未提交） |
 
 ## 阻塞
 
@@ -36,6 +37,7 @@
 1. 复核本次改名与拆分并提交（`src/`、`lib/`、`package.json`、`cordis.patch.yml`、`LICENSE`、文档）；提交前按 [RUNBOOK.md](RUNBOOK.md)“发布”核对 `lib/` diff。**提交前还应在 GitHub 建仓 `EidnG3lZ/dsh-windows-shell-manager` 并推送**（`package.json` 的 `repository`/`homepage`/`bugs` 已指向该仓库名）。
 2. 决定是否补一条 **client 类型基线**：`src/client` 被 `tsconfig.json` 的 `exclude` 排除，现有类型基线不覆盖它（本次用临时 config 检查，发现 9 条**拆分前就存在**的诊断，详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §13.3）。
 3. 若要装进本机 web profile 验证 UI：改 `src/**` 后**不要**在受限沙箱跑 `build.sh`（会 `EPERM` 且删掉已有 junction），改用手动 `tsc` + `tsdown`（[RUNBOOK.md](RUNBOOK.md)）。
+4. 复核并提交本次 MSIX 探测修复（`src/host/detect.ts`、`tests/executable-and-args.mjs`、`lib/host/detect.*`、[CHANGELOG.md](CHANGELOG.md) 与 ARCHITECTURE / RISKS / RUNBOOK）；提交前按 RUNBOOK「发布」核对 `lib/` diff，并决定是否随一个补丁版本发布。
 
 ## 待核实 / 待修正
 

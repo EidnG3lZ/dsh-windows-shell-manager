@@ -5,6 +5,7 @@
 > **2026-10-09 结构更正**：原文把本仓库描述为工作区下的嵌套目录，且所有相对链接带 `dsh-windows-shell-manager/` 前缀，实际 git 仓库根**就是**工作区根，链接已全部改为相对仓库根（详见 §2.1）。
 > **2026-10-09 开发经验复核**：§2.2 包元数据、§6 构建与发布、§7.3 客户端槽位必坑、§8 本机现状、§9.2/§9.3 注意点、§10 开发指引已按当前代码与本机实测逐条核对，据此修正了版本号 / `peerDependencies` 值域 / `scripts`、§7.3 第 3 条（该槽位已随 DSH 0.2.0 删除）、§8 备选 checkout 的 bootstrap 状态，并按**沙箱实测**重写了 §9.3 与 §6.2/§8 的构建警告（受限沙箱拒绝的是「工作区外 target 的 junction」，`niu` 可替代起不来的 git-bash，但不能绕过文件沙箱）。**§3–§5 及 §4 各功能小节的功能性描述仍未逐行复核**（未变化处保持原样）。
 > `#L行号` 锚点已随 **2026-10-09 模块拆分**全部替换为所属模块的文件链接（不再有行号锚点）；正文中的符号名请在该模块内按名定位。
+> **2026-10-15 MSIX / Store 探测修复**：§4.3 的可执行文件存在性判定改为 `lstat`（认 MSIX 应用执行别名）并补 PowerShell 家族候选，§2.1、§9.2 第 4/9 条、§10.2 第 4/5 项与 §11 符号索引同步；改动记录见 [CHANGELOG.md](../CHANGELOG.md)「[未发布] → 修复」。
 
 ## 目录
 
@@ -52,7 +53,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 │   ├── host/                host 实现，按职责分模块（9 个文件）
 │   │   ├── config.ts        条目模型 / Config schema / 归一化与保存校验 / volatile 读取（206 行）
 │   │   ├── shell-args.ts    shell 家族判定 / 启动参数模板解析 / argv 构造 / 默认工具提示词（121 行）
-│   │   ├── detect.ts        可执行文件解析（绝对路径 / PATH 文件名 / 家族自动探测）（104 行）
+│   │   ├── detect.ts        可执行文件解析（绝对路径 / PATH 文件名 / 家族自动探测；lstat 判定存在性）（133 行）
 │   │   ├── result.ts        shell 工具结果渲染与 exit/signal 解析（55 行）
 │   │   ├── tool.ts          单条目 shell 工具定义（defineTool，含执行全链路）（302 行）
 │   │   ├── policy.ts        策略状态机（注册/注销、状态视图、引导文本）（166 行）
@@ -76,7 +77,7 @@ E:\DSHProjects\dsh-windows-shell-policy\      ← 工作区根 = git 仓库根�
 ├── tests/
 │   ├── host-harness.mjs    假 ctx 集成测试（71 项断言；真实 spawn git-bash / pwsh，无需启动 DSH）
 │   │                       —— 管道捕获输出，受限沙箱下 spawn 会 EPERM，需完全权限
-│   └── executable-and-args.mjs  可执行文件（绝对路径 / 文件名走 PATH）/ 启动参数模板 / 默认提示词 / 显示名回归（33 项断言；spawn 用记录型桩，沙箱内可跑）
+│   └── executable-and-args.mjs  可执行文件（绝对路径 / 文件名走 PATH / MSIX 应用执行别名）/ 启动参数模板 / 默认提示词 / 显示名回归（37 项断言；spawn 用记录型桩，沙箱内可跑）
 ├── docs/
 │   ├── ARCHITECTURE.md             本文档：架构与开发指南
 │   ├── conventions.md              插件编写规范与踩坑速查（最有价值的开发笔记）
@@ -225,10 +226,11 @@ DSH 0.2.0 起：
 
 ### 4.3 路径解析与探测（[`resolveShellPath()`](../src/host/detect.ts)）
 
-`path` 显式给出时：绝对路径直接用（不存在则条目不可用，面板报「未找到可执行文件：…」）；**只填文件名**（不含目录分隔符）则在进程 PATH 里查找。`path` 留空 → 按家族探测第一个存在的候选：
+`path` 显式给出时：绝对路径直接用（不可用则条目不可用，面板报「未找到可执行文件：…」）；**只填文件名**（不含目录分隔符）则在进程 PATH 里查找。`path` 留空 → 按家族探测第一个存在的候选：
 
+- **存在性用 [`isSpawnableFile()`](../src/host/detect.ts) 判定**（`lstat`，**不跟随重解析点**），而不是 `existsSync`/`stat`：MSIX / Microsoft Store 应用的**应用执行别名**是重解析点，跟随它会被系统以 `EACCES` 拒绝、`existsSync` 返回 false，于是 Store 版安装的 pwsh（别名 `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`）被当成不存在；`lstat` 只打开条目本身就能看见别名（别名在 Node 新版报成符号链接、旧版报成普通文件，CreateProcess 两种形态都能解析）。真目录不算。已知取舍：任何「`lstat` 看得见但实际打不开」的重解析点（卸载残留的别名、指向目录的目录符号链接）也会被判为命中，失败推迟到 spawn 时（[RISKS.md](../RISKS.md) R6）。
 - **Bash 家族**（[`bashCandidates()`](../src/host/detect.ts)）：`%ProgramFiles%\Git\bin\bash.exe` → `%ProgramFiles%\Git\usr\bin\bash.exe` → `%ProgramFiles(x86)%\Git\bin\bash.exe` → `%LOCALAPPDATA%\Programs\Git\bin\bash.exe` → `C:\msys64\usr\bin\bash.exe` → `C:\cygwin64\bin\bash.exe` → PATH 逐目录找 `<条目名>.exe` / `bash.exe`。
-- **PowerShell 家族**（[`pwshCandidates()`](../src/host/detect.ts)）：`%ProgramFiles%\PowerShell\7\pwsh.exe` → PATH 里 `pwsh.exe` → `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`。
+- **PowerShell 家族**（[`pwshCandidates()`](../src/host/detect.ts)）：`%ProgramFiles%\PowerShell\7\pwsh.exe` → `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`（MSIX / Store 别名的固定落点，显式列出，该目录不在 PATH 里也能探测）→ PATH 里 `pwsh.exe` → `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`。
 - 家族判定 [`isPwshFamily()`](../src/host/shell-args.ts)：条目名或路径里出现 `pwsh` / `powershell` 即归 PowerShell 家族（决定 `-Command` 方言与探测候选），否则按 Bash 家族。
 - PATH 只认 `.exe`（[`pathCandidates()`](../src/host/detect.ts)）：`.cmd`/`.bat` 不能直接 spawn；无扩展名的名字补 `.exe`，已带扩展名的不再追加。
 - **文件名走 PATH**（[`resolveExecutableInPath()`](../src/host/detect.ts)）：在 PATH 的每个目录里找该名字，命中即用它的绝对路径，**不回落**家族候选——填了 `myweirdsh` 就只找 `myweirdsh(.exe)`，避免「填了 A 却起了 B」。
@@ -536,12 +538,12 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 1. **条目错误只对面板可见**：条目注册失败（未找到可执行文件 / 工具名被占用 / 重名 / 注册抛错）只写进 `EntryStatus.error` 并经 `/status` 暴露；模型侧只看到「注册成功的工具 + 被隐藏的内置 shell」，没有任何错误提示——**用户要打开面板才知道某条目没生效**。
 2. **条目运行时状态改为按需重算（v0.1.1 修复）**：`status` / `registeredNames` 存在闭包快照里（[host/policy.ts](../src/host/policy.ts)），原先只在 `applyPolicy()` 里刷新。而 DSH 对**只有 volatile 字段变化**的 entry 更新不重挂插件：`vendor/loader/src/config/entry.ts` 的 `_commitVolatile()` 原地 `updateVolatile` 已有引用并发 `loader/volatile-update`，`apply` 不再被调用。因此面板保存后必须自己重算，否则工具注册与 `/status` 停在旧快照（表现：保存后修改「消失」）。现在由 `reconcile()`（幂等，按条目签名比对）在 `loader/volatile-update`、`/status`、`system-prompt/assemble` 三处触发。**升级 DSH 时需回归验证。**
 3. **`fullAccess` 与运行上下文不一致**：session 沙箱策略仍是 `workspace-write` 时，运行时上下文照旧告诉模型「写入受限于工作区」，而 fullAccess 条目的命令实际不受限制；这是刻意的 per-tool 选择，但两者并存时模型可能误判。
-4. **探测候选仍不完整**：已覆盖 `%LOCALAPPDATA%\Programs\Git\bin\bash.exe`、`Git\usr\bin\bash.exe`、PATH 按名查找；仍缺 scoop shim 特判与 WSL。本机 `PATH` 里的 `bash` 是 scoop shim，只有在 Git 安装路径都没命中时才会被用到。
+4. **探测候选仍不完整**：已覆盖 `%LOCALAPPDATA%\Programs\Git\bin\bash.exe`、`Git\usr\bin\bash.exe`、PATH 按名查找、MSIX / Store 应用执行别名（`%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`，存在性用 `lstat` 判定，见 §4.3）；仍缺 scoop shim 特判与 WSL。本机 `PATH` 里的 `bash` 是 scoop shim，只有在 Git 安装路径都没命中时才会被用到。
 5. **不加载登录 / 交互 profile**：Bash 家族固定 `-c`（无 `-l`/`-i`），PowerShell 家族固定 `-NoProfile -NonInteractive`，因此 `.bashrc` / `$PROFILE` 里的环境不会生效。这是有意的（与官方 shell 工具一致），但值得在文档里说清。
 6. **HTTP API 无鉴权**：`POST /shells`、`/detect`、`/defaults` 只做形状与值域校验（条目数 ≤16、名称唯一、路径绝对、字段长度上限），请求体经 `readJsonBody()` 手写拼接（无体积上限）；依赖 `webServer` 自身的访问控制（web 端有认证，桌面端需 token）。跨源 / 本地其它进程若能访问该端口即可改配置。
 7. **条目 error 直接透出原始错误文本**：注册抛错时写成 `工具注册失败：${String(error)}`（[host/policy.ts](../src/host/policy.ts)），面板会显示内部路径 / 堆栈首行，信息量大但对外观感一般。
 8. **升级提示依赖注册时快照**：`escalationModes` 在 `buildTool()` 里按条目的 `fullAccess` 与组合能力算一次并闭包捕获（[host/tool.ts](../src/host/tool.ts)）；组合变化后需重新 apply 才更新（与第 2 条同源风险）。
-9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（71 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（33 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
+9. **有本地集成测试，但仍无 CI / lint / format 配置**：`tests/host-harness.mjs`（71 项断言，真实 spawn，需完全权限）覆盖 host 侧的条目模型与执行链路，`tests/executable-and-args.mjs`（37 项断言，spawn 用桩，沙箱内可跑）覆盖可执行文件解析（绝对路径 / 文件名走 PATH / MSIX 应用执行别名）、启动参数模板与默认提示词；仓库内仍没有 workflow / oxlint 配置（DSH 主仓库的 `lefthook.yml` / `.oxlintrc.json` 不在本仓库）。
 10. **硬编码中文 UI 文案**：客户端校验与状态文案均为中文字面量（如 [client/validation.ts](../src/client/validation.ts)、[client/card.ts](../src/client/card.ts)），host 侧 API 错误同样是中文（[host/config.ts](../src/host/config.ts)），无 i18n 层；而 DSH client 是有 locale 服务的。
 11. **运行期依赖曾用错包名（v0.1.0 的真实故障，v0.1.1 修复）**：`schemastery` / `cordis` 只是 `build.sh` 建立的编译期本地别名，`vendor/*` 的真实包名是 `@deepseek-ai/schemastery` / `@deepseek-ai/cordis`。插件从 GitHub 装进 `profiles/<name>/node_modules` 后，Node 的向上查找只在共享的 `~/.dsh/profiles/node_modules` 命中作用域名那一份 → 裸名 `ERR_MODULE_NOT_FOUND`，DSH 启动打印 `dsh-windows-shell-manager (dsh-windows-shell-manager): failed to import`，配置面板不出现。**新增任何非 `node:` 内建的 import 前，先确认用的是发布名。**
 
@@ -578,8 +580,8 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 1. **打通开发闭环**：**已完成** —— `E:\DSHSource\current` 已 bootstrap（提供 tsc / tsdown）；本仓库自身仍需先建好 junction（完全权限跑一次 `build.sh`，或手工建同样的 link），之后 `build.sh` / `npm run typecheck` 才可用。
 2. **修文档漂移**：**已完成** —— capabilities-host / capabilities-client / README（中英）/ roadmap 已按 v0.1.0 同步（见 §9.1）。
 3. **修引导文本**：**已完成** —— `shell-policy` section 改为函数文本，按已注册条目生成，无工具时为空。
-4. **补探测候选**：**部分完成** —— 已补用户级 Git、`Git\usr\bin`、PATH 按名；仍可继续补 scoop shim 特判与 WSL。「显式路径不存在」现在会作为该条目的 `error` 显示在面板上。
-5. **建立最小回归**：**已完成（host 侧）** —— `tests/host-harness.mjs`（71 项断言）+ `tests/executable-and-args.mjs`（33 项断言）；仍缺 CI 与 client 侧测试。
+4. **补探测候选**：**部分完成** —— 已补用户级 Git、`Git\usr\bin`、PATH 按名、MSIX / Store 别名（§4.3，2026-10-15）；仍可继续补 scoop shim 特判与 WSL。「显式路径不存在」现在会作为该条目的 `error` 显示在面板上。
+5. **建立最小回归**：**已完成（host 侧）** —— `tests/host-harness.mjs`（71 项断言）+ `tests/executable-and-args.mjs`（37 项断言）；仍缺 CI 与 client 侧测试。
 6. **i18n**：把 client 中文文案接到 DSH locale 服务（`@deepseek-ai/dsh-client-locale`）。
 7. **与 `dsh-gitbash-shell` 的定位澄清**：两者目标重叠，选其一为主或明确互斥检测——例如对方已注册同名工具时，本插件会把该条目报为「工具名已被占用」，可据此提示用户。
 8. **非 Windows 语义**（可选）：目前 Linux/macOS 直接跳过；若要做「统一 shell 策略」可扩展到 WSL / zsh。
@@ -606,8 +608,8 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | `PWSH_PREAMBLE` / `isPwshFamily` / `COMMAND_PLACEHOLDER` | [host/shell-args.ts](../src/host/shell-args.ts) | UTF-8 输出前缀、家族判定（`-Command` vs `-c`）、模板占位符 `{command}` |
 | `parseArgs` / `argTemplate` / `argTemplateProblem` / `buildArgv` | [host/shell-args.ts](../src/host/shell-args.ts) | 参数解析、家族默认/自定义模板与校验、argv 构造 |
 | `defaultToolDescription` | [host/shell-args.ts](../src/host/shell-args.ts) | 默认工具提示词（host 唯一来源：buildTool 回落 + `POST /defaults`） |
-| `isBareExecutableName` / `executablePathProblem` | [host/detect.ts](../src/host/detect.ts) | `path` 是否为纯文件名、`path` 值域校验 |
-| `pathCandidates` / `bashCandidates` / `pwshCandidates` | [host/detect.ts](../src/host/detect.ts) | PATH 与家族探测候选（无扩展名的名字补 `.exe`） |
+| `isBareExecutableName` / `executablePathProblem` / `isSpawnableFile` | [host/detect.ts](../src/host/detect.ts) | `path` 是否为纯文件名、`path` 值域校验、候选存在性判定（`lstat`，认 MSIX 应用执行别名） |
+| `pathCandidates` / `bashCandidates` / `pwshCandidates` | [host/detect.ts](../src/host/detect.ts) | PATH 与家族探测候选（无扩展名的名字补 `.exe`；PowerShell 家族含 `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`） |
 | `resolveShellPath` / `resolveExecutableInPath` | [host/detect.ts](../src/host/detect.ts) | 解析条目可执行文件、在 PATH 里按文件名查找 |
 | `BashResult` / `renderShellResult` | [host/result.ts](../src/host/result.ts) | 工具结果形状与文本渲染（含标记） |
 | `parseExitStatus` | [host/result.ts](../src/host/result.ts) | 从末尾拆 exit/signal 状态 |
@@ -650,7 +652,7 @@ DSH_CHECKOUT=E:/DSHSource/current npm run typecheck
 | [tsconfig.json](../tsconfig.json) / [tsdown.config.ts](../tsdown.config.ts) | host / client 构建配置 |
 | [scripts/build.sh](../scripts/build.sh) | 一键构建（探测 checkout + link 依赖 + tsc + tsdown） |
 | [tests/host-harness.mjs](../tests/host-harness.mjs) | 假 ctx 集成测试（71 项断言；真实 spawn git-bash / pwsh，不启动 DSH；受限沙箱下会 EPERM） |
-| [tests/executable-and-args.mjs](../tests/executable-and-args.mjs) | 可执行文件（绝对路径 / 文件名走 PATH）/ 启动参数模板 / 默认提示词 / 显示名回归（33 项断言；spawn 记录型桩，沙箱内可跑） |
+| [tests/executable-and-args.mjs](../tests/executable-and-args.mjs) | 可执行文件（绝对路径 / 文件名走 PATH / MSIX 应用执行别名）/ 启动参数模板 / 默认提示词 / 显示名回归（37 项断言；spawn 记录型桩，沙箱内可跑） |
 | [docs/conventions.md](../docs/conventions.md) | 编写规范与踩坑速查（**改动前必读**） |
 
 ---
