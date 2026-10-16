@@ -2,7 +2,7 @@
 
 [中文](README.md) | English
 
-![Shell tools config panel](docs/screenshots/shell-manager-card.png)
+![Shell tools config panel](docs/screenshots/PluginConfig.png)
 
 [![npm version](https://img.shields.io/npm/v/dsh-windows-shell-manager)](https://www.npmjs.com/package/dsh-windows-shell-manager)
 [![npm downloads](https://img.shields.io/npm/dw/dsh-windows-shell-manager)](https://www.npmjs.com/package/dsh-windows-shell-manager)
